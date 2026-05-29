@@ -1,5 +1,7 @@
 # linux-tings
 
+*Warning, some projects, pretty much all the larger ones are built with Claude*
+
 Personal public backup of my custom projects, configs, wallpapers, and anything
 else worth keeping. Partly a safety net in case my things go bye bye, partly to
 share.
