@@ -1,0 +1,13 @@
+#!/bin/sh
+# Xsetup - run as root by SDDM before the login dialog appears.
+# Install to: /usr/share/sddm/scripts/Xsetup  (this path is a pacman backup file,
+# so edits here are preserved across sddm upgrades).
+#
+# Stack the two displays vertically to match the Plasma (Wayland) desktop layout.
+# The SDDM greeter runs on X11 (XLibre + amdgpu DDX) and does NOT read the Wayland
+# session's ~/.config/kwinoutputconfig.json, so without this it defaults to placing
+# the monitors side-by-side. Output -> monitor map (from /var/log/Xorg.0.log EDID):
+#   DisplayPort-1 = Samsung 29051 (model 717b, SN H4PW100687) = BOTTOM monitor [primary]
+#   DisplayPort-2 = Samsung 29050 (model 717a, SN H4PW100296) = TOP monitor
+xrandr --output DisplayPort-1 --primary --mode 1920x1080 --pos 0x1080 \
+       --output DisplayPort-2 --mode 1920x1080 --pos 0x0

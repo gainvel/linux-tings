@@ -1,0 +1,14 @@
+# Re-apply the custom "void" lock screen after any plasma-desktop install/upgrade.
+# plasma-desktop owns the shell lockscreen QML and ships no pacman backup entry for it,
+# so upgrades overwrite it back to stock. This hook restores it from the staging dir.
+# Install to: /etc/pacman.d/hooks/void-lockscreen.hook
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = plasma-desktop
+
+[Action]
+Description = Restoring void lock screen theme...
+When = PostTransaction
+Exec = /usr/local/bin/restore-void-lockscreen.sh
