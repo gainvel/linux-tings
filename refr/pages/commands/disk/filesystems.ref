@@ -1,0 +1,136 @@
+---
+title: Filesystems
+order: 2
+description: Creating, checking, and tuning filesystems
+tags: [disk, filesystem, mkfs, fsck, ext4, btrfs, xfs, fat, tune2fs, resize2fs]
+---
+
+Commands for creating, checking, repairing, and tuning filesystems. Always unmount before running fsck or resize operations unless the tool explicitly supports live operation.
+
+@text
+Create filesystems with mkfs.
+
+@code bash
+# ext4 — general-purpose Linux filesystem
+sudo mkfs.ext4 /dev/sda1
+
+# ext4 with label
+sudo mkfs.ext4 -L rootfs /dev/sda1
+
+# ext4 tuned for large storage (fewer inodes, larger blocks)
+sudo mkfs.ext4 -T largefile /dev/sda1
+
+# btrfs — copy-on-write filesystem with snapshots
+sudo mkfs.btrfs /dev/sda1
+
+# btrfs with label
+sudo mkfs.btrfs -L data /dev/sda1
+
+# btrfs on multiple devices (RAID1 metadata, RAID0 data)
+sudo mkfs.btrfs -m raid1 -d raid0 /dev/sda1 /dev/sdb1
+
+# XFS — high-performance filesystem
+sudo mkfs.xfs /dev/sda1
+
+# XFS with label
+sudo mkfs.xfs -L fastdata /dev/sda1
+
+# FAT32 — for EFI partitions and USB drives
+sudo mkfs.fat -F 32 /dev/sda1
+
+# FAT32 with label (max 11 chars)
+sudo mkfs.fat -F 32 -n EFI /dev/sda1
+
+# exFAT — large file support on removable media
+sudo mkfs.exfat -n USBDRIVE /dev/sda1
+
+@text
+Check and repair filesystems with fsck. The filesystem must be unmounted.
+
+@code bash
+# Check ext4 filesystem (interactive repair)
+sudo fsck.ext4 /dev/sda1
+
+# Automatically repair without prompts
+sudo fsck.ext4 -y /dev/sda1
+
+# Check without making changes (dry run)
+sudo fsck.ext4 -n /dev/sda1
+
+# Force check even if filesystem appears clean
+sudo fsck.ext4 -f /dev/sda1
+
+# Check XFS (xfs_repair replaces fsck.xfs)
+sudo xfs_repair /dev/sda1
+
+# XFS dry run
+sudo xfs_repair -n /dev/sda1
+
+# Check btrfs
+sudo btrfs check /dev/sda1
+
+# btrfs check with repair (use with caution)
+sudo btrfs check --repair /dev/sda1
+
+# Check FAT filesystem
+sudo fsck.fat -a /dev/sda1
+
+@text
+Tune ext4 filesystem parameters with tune2fs.
+
+@code bash
+# Show filesystem info
+sudo tune2fs -l /dev/sda1
+
+# Set filesystem label
+sudo tune2fs -L mydata /dev/sda1
+
+# Set reserved block percentage (default 5%, lower for data drives)
+sudo tune2fs -m 1 /dev/sda1
+
+# Disable automatic fsck interval (check count)
+sudo tune2fs -c 0 /dev/sda1
+
+# Disable automatic fsck interval (time-based)
+sudo tune2fs -i 0 /dev/sda1
+
+# Enable features (e.g., dir_index for faster directory lookups)
+sudo tune2fs -O dir_index /dev/sda1
+
+# Set mount count before next forced fsck
+sudo tune2fs -c 30 /dev/sda1
+
+@text
+Resize ext4 filesystems with resize2fs. Grow online or shrink offline.
+
+@code bash
+# Grow ext4 to fill partition (online, filesystem mounted)
+sudo resize2fs /dev/sda1
+
+# Shrink ext4 to specific size (must be unmounted)
+sudo umount /dev/sda1
+sudo e2fsck -f /dev/sda1
+sudo resize2fs /dev/sda1 50G
+
+# Resize to exact block count
+sudo resize2fs /dev/sda1 13107200
+
+@text
+XFS can only be grown, never shrunk, and must be mounted.
+
+@code bash
+# Grow XFS to fill available space (by mountpoint)
+sudo xfs_growfs /mnt/data
+
+@text
+Btrfs resize (must be mounted).
+
+@code bash
+# Grow btrfs to fill device
+sudo btrfs filesystem resize max /mnt/data
+
+# Shrink btrfs by 10 GiB
+sudo btrfs filesystem resize -10G /mnt/data
+
+# Resize to exact size
+sudo btrfs filesystem resize 100G /mnt/data

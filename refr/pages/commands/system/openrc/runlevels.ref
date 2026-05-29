@@ -1,0 +1,112 @@
+---
+title: Runlevels
+order: 2
+description: rc-update add/del/show, default/boot/shutdown runlevels
+tags: [openrc, runlevels, rc-update, boot, default]
+---
+
+Runlevels define which services start at which stage. rc-update manages service-to-runlevel assignments.
+
+@text
+Viewing Runlevels
+
+@code bash
+# Show all services and their runlevels
+rc-update show
+
+# Show services in a specific runlevel
+rc-update show default
+rc-update show boot
+rc-update show shutdown
+
+# Show verbose (includes inactive services)
+rc-update -v show
+
+@text
+Managing Service Runlevels
+
+@code bash
+# Add a service to the default runlevel (starts at normal boot)
+sudo rc-update add sshd default
+
+# Add to the boot runlevel (starts early, before default)
+sudo rc-update add hwclock boot
+
+# Add to shutdown runlevel
+sudo rc-update add savecache shutdown
+
+# Remove a service from a runlevel
+sudo rc-update del sshd default
+
+# Move a service between runlevels
+sudo rc-update del sshd default
+sudo rc-update add sshd boot
+
+@text
+Standard Runlevels
+
+@code bash
+# sysinit  — earliest stage, mounts filesystems, sets hostname
+#            (managed by OpenRC itself, usually don't add services here)
+
+# boot     — essential services needed before user login
+#            hwclock, modules, sysctl, hostname, keymaps, udev, etc.
+#            Runs after sysinit.
+
+# default  — normal operation services
+#            NetworkManager, sshd, cronie, display manager, etc.
+#            Runs after boot. This is where most services go.
+
+# shutdown — cleanup before power off
+#            savecache, killprocs, mount-ro
+#            Runs on shutdown/reboot.
+
+# View contents of each runlevel directory
+ls /etc/runlevels/default/
+ls /etc/runlevels/boot/
+ls /etc/runlevels/shutdown/
+
+# These directories contain symlinks to init scripts
+ls -la /etc/runlevels/default/
+
+@text
+Custom Runlevels
+
+@code bash
+# Create a custom runlevel
+sudo mkdir /etc/runlevels/minimal
+
+# Add services to the custom runlevel
+sudo rc-update add udev minimal
+sudo rc-update add dbus minimal
+sudo rc-update add elogind minimal
+sudo rc-update add sshd minimal
+
+# Boot into a custom runlevel (add to kernel params)
+# In GRUB: softlevel=minimal
+
+# Switch runlevel at runtime
+sudo openrc minimal
+
+# Switch back to default
+sudo openrc default
+
+@text
+Practical Examples
+
+@code bash
+# Typical default runlevel services on an Artix desktop:
+sudo rc-update add elogind default
+sudo rc-update add NetworkManager default
+sudo rc-update add sddm default
+sudo rc-update add dbus default
+sudo rc-update add cronie default
+sudo rc-update add syslog-ng default
+sudo rc-update add bluetoothd default
+
+# Typical boot runlevel:
+sudo rc-update add udev boot
+sudo rc-update add hwclock boot
+sudo rc-update add keymaps boot
+sudo rc-update add modules boot
+sudo rc-update add sysctl boot

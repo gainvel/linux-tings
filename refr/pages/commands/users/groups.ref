@@ -1,0 +1,148 @@
+---
+title: Groups
+order: 2
+description: groupadd, groupmod, groupdel, gpasswd, newgrp
+tags: [groups, groupadd, groupmod, groupdel, gpasswd, newgrp]
+---
+
+Group management for access control and resource sharing.
+
+@text
+groupadd — Create Groups
+
+@code bash
+# Create a new group
+sudo groupadd developers
+
+# Create with specific GID
+sudo groupadd -g 2000 developers
+
+# Create a system group (GID in system range)
+sudo groupadd -r myservice
+
+@text
+groupmod — Modify Groups
+
+@code bash
+# Rename a group
+sudo groupmod -n newname oldname
+
+# Change GID
+sudo groupmod -g 3000 groupname
+
+@text
+groupdel — Delete Groups
+
+@code bash
+# Delete a group
+sudo groupdel groupname
+
+# Cannot delete a group that is any user's primary group
+# Change primary group first:
+sudo usermod -g users username
+sudo groupdel oldprimary
+
+@text
+gpasswd — Group Membership Management
+
+@code bash
+# Add a user to a group
+sudo gpasswd -a username groupname
+
+# Remove a user from a group
+sudo gpasswd -d username groupname
+
+# Set group administrator
+sudo gpasswd -A username groupname
+
+# Set group members (replaces entire member list)
+sudo gpasswd -M user1,user2,user3 groupname
+
+# Set a group password (rarely used)
+sudo gpasswd groupname
+
+# Remove group password
+sudo gpasswd -r groupname
+
+@text
+newgrp — Switch Active Group
+
+@code bash
+# Switch to a group temporarily (starts new shell with that primary group)
+newgrp docker
+
+# After newgrp, new files will be owned by the new primary group
+# Exit the shell to return to original primary group
+exit
+
+# Useful when you just got added to a group and haven't logged out
+# Alternative: re-evaluate groups without logout
+newgrp docker       # activates group membership for current session
+
+@text
+Viewing Group Information
+
+@code bash
+# List groups for current user
+groups
+id -Gn
+
+# List groups for a specific user
+groups username
+id -Gn username
+
+# View group details
+getent group groupname
+grep "^groupname:" /etc/group
+
+# List all groups
+cat /etc/group
+getent group
+
+# Show GID for a group
+getent group groupname | cut -d: -f3
+
+# Show all members of a group
+getent group groupname | cut -d: -f4
+# Note: this misses users who have it as primary group
+# To find all users with a group (primary + supplementary):
+getent group groupname
+awk -F: -v gid=$(getent group groupname | cut -d: -f3) '$4==gid {print $1}' /etc/passwd
+
+@text
+Important System Groups
+
+@code bash
+# wheel    — sudo access (must be in wheel group for sudo)
+# audio    — direct audio device access
+# video    — direct video/GPU device access
+# storage  — removable storage access
+# network  — NetworkManager network management
+# docker   — Docker daemon access
+# libvirt  — libvirt/QEMU VM management
+# input    — input devices (joysticks, etc.)
+# uucp     — serial ports (Arduino, etc.)
+# lp       — printer access
+# scanner  — scanner access
+# log      — read system log files
+# optical  — optical drive access
+
+# Add yourself to common desktop groups
+sudo usermod -aG wheel,audio,video,storage,network $USER
+
+# Changes take effect after logout/login or:
+newgrp groupname    # for a single group in current shell
+
+@text
+Group Files
+
+@code bash
+# /etc/group — group database
+# Format: name:password:GID:members
+cat /etc/group
+
+# /etc/gshadow — group passwords (root only)
+sudo cat /etc/gshadow
+
+# View group entries with getent (includes LDAP/SSSD if configured)
+getent group

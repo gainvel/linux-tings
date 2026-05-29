@@ -1,0 +1,94 @@
+---
+title: Branching
+order: 2
+description: Branches, switching, merging, and rebasing
+tags: [git, branch, checkout, switch, merge, rebase]
+---
+
+Branches are lightweight pointers to commits. Use them freely for features,
+fixes, and experiments.
+
+@code bash
+# List branches
+git branch                       # local branches
+git branch -r                    # remote-tracking branches
+git branch -a                    # all branches
+git branch -v                    # show last commit on each branch
+git branch --merged              # branches merged into current
+git branch --no-merged           # branches not yet merged
+
+# Create branches
+git branch feature-auth          # create branch (stay on current)
+git branch feature-auth abc1234  # branch from specific commit
+
+# Delete branches
+git branch -d feature-auth       # delete if merged
+git branch -D feature-auth       # force delete
+git push origin --delete feature-auth   # delete remote branch
+
+# Rename branches
+git branch -m old-name new-name
+git branch -m new-name           # rename current branch
+
+@text
+Use `git switch` (modern) or `git checkout` to change branches.
+
+@code bash
+# Switch branches
+git switch main
+git switch -c new-feature        # create and switch
+git switch -c fix-123 origin/main  # branch from remote
+
+# Checkout (older, still works)
+git checkout main
+git checkout -b new-feature      # create and switch
+git checkout -- file.go          # discard working tree changes (dangerous)
+
+# Detached HEAD
+git switch --detach v2.0         # checkout a tag
+git checkout abc1234             # checkout a commit
+
+@text
+Merging combines branch histories. Fast-forward merges move the pointer;
+three-way merges create a merge commit.
+
+@code bash
+# Merge a branch into current
+git merge feature-auth
+git merge --no-ff feature-auth   # force merge commit (no fast-forward)
+git merge --squash feature-auth  # squash all commits into staging area
+git merge --abort                # cancel merge in progress
+
+# Resolve conflicts
+# 1. Edit conflicted files (look for <<<<<<<, =======, >>>>>>>)
+# 2. Stage resolved files
+git add resolved-file.go
+# 3. Complete the merge
+git commit
+
+@text
+Rebasing replays commits onto a new base. Produces linear history but
+rewrites commits -- never rebase published/shared branches.
+
+@code bash
+# Rebase current branch onto main
+git rebase main
+git rebase main feature-auth     # rebase feature-auth onto main
+
+# Interactive rebase (edit, squash, reorder commits)
+git rebase -i HEAD~5             # last 5 commits
+git rebase -i main               # all commits since diverging from main
+# In editor: pick, reword, edit, squash, fixup, drop
+
+# Continue after resolving conflicts
+git rebase --continue
+git rebase --abort               # cancel rebase
+git rebase --skip                # skip current commit
+
+# Rebase with autosquash (use fixup!/squash! commit prefixes)
+git commit --fixup=abc1234
+git rebase -i --autosquash main
+
+# Pull with rebase instead of merge
+git pull --rebase
+git config --global pull.rebase true   # make it default

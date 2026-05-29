@@ -1,0 +1,104 @@
+---
+title: Sync & Repos
+order: 5
+description: -Sy, -Ss, -Si, mirrorlist, reflector
+tags: [pacman, sync, search, mirror, reflector, repository]
+---
+
+Searching remote repositories, viewing package info, and managing mirrors.
+
+@code bash
+# ---- sync database ----
+
+pacman -Sy                                # refresh package databases
+pacman -Syy                               # force refresh (even if up to date)
+
+# IMPORTANT: never use -Sy alone. Always pair with -u or install:
+pacman -Syu                               # sync + upgrade (correct)
+pacman -Syu package                       # sync + upgrade + install (correct)
+
+@code bash
+# ---- search remote repositories ----
+
+pacman -Ss search-term                    # search names and descriptions
+pacman -Ss '^vim'                         # regex support
+pacman -Ss 'python-.*utils'              # pattern match
+
+@code bash
+# ---- remote package info ----
+
+pacman -Si package                        # detailed info from repos
+pacman -Si package | grep -E "Repository|Version|Depends"   # filtered
+
+# compare installed vs available version
+pacman -Qi package | grep Version         # installed
+pacman -Si package | grep Version         # available
+
+@code bash
+# ---- repository configuration ----
+
+# /etc/pacman.conf repository sections (Artix)
+# Order matters: first match wins
+
+# [system]                                # Artix system (OpenRC-specific)
+# [world]                                 # Artix world
+# [galaxy]                                # Artix galaxy
+# [extra]                                 # Arch extra (via lib32, multilib)
+
+@text
+Artix uses its own repos (system, world, galaxy) layered on top of Arch
+repos. The Artix repos contain packages patched for OpenRC/runit/s6
+compatibility. Arch repos provide the rest.
+
+@code bash
+# ---- mirror configuration ----
+
+# Artix mirrors: /etc/pacman.d/mirrorlist
+# Arch mirrors: /etc/pacman.d/mirrorlist-arch
+
+# example /etc/pacman.d/mirrorlist
+Server = https://mirror1.artixlinux.org/$repo/os/$arch
+Server = https://mirror2.artixlinux.org/$repo/os/$arch
+
+@code bash
+# ---- reflector: automatic mirror ranking (Arch mirrors) ----
+
+# install
+pacman -S reflector
+
+# rank mirrors by speed
+reflector --country US --age 12 --protocol https --sort rate --save /etc/pacman.d/mirrorlist-arch
+
+# top 10 recently synced mirrors
+reflector --latest 10 --protocol https --sort rate --save /etc/pacman.d/mirrorlist-arch
+
+# verbose with country list
+reflector --verbose --country 'United States,Canada' --protocol https --sort rate --save /etc/pacman.d/mirrorlist-arch
+
+# list available countries
+reflector --list-countries
+
+@text
+For Artix mirrors specifically, use rankmirrors from pacman-contrib instead
+of reflector, or manually edit /etc/pacman.d/mirrorlist based on the
+Artix mirror list at https://gitea.artixlinux.org/packagesA/artix-mirrorlist/
+
+@code bash
+# rankmirrors (pacman-contrib)
+rankmirrors -n 5 /etc/pacman.d/mirrorlist.bak > /etc/pacman.d/mirrorlist
+
+@code bash
+# ---- adding Arch repos to Artix ----
+
+# install Arch Linux support
+pacman -S artix-archlinux-support
+
+# add to /etc/pacman.conf (after Artix repos)
+# [extra]
+# Include = /etc/pacman.d/mirrorlist-arch
+
+# [multilib]
+# Include = /etc/pacman.d/mirrorlist-arch
+
+# then sync
+pacman -Sy

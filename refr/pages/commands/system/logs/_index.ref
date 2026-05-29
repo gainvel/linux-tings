@@ -1,0 +1,8 @@
+---
+title: Logs
+order: 3
+description: System logging (no journald)
+tags: [logs, syslog, logrotate, logging]
+---
+
+System logging on Artix Linux without systemd/journald. Uses syslog-ng or metalog with traditional log files in /var/log/.

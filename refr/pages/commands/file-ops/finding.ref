@@ -1,0 +1,138 @@
+---
+title: Finding
+order: 1
+description: Finding files and commands — find, locate, which, whereis, type
+tags: [files, find, locate, updatedb, which, whereis, type]
+---
+
+Tools for locating files on disk and identifying command locations.
+
+@text
+find — search the filesystem in real time. Powerful but slower than indexed searches.
+
+@code bash
+# Find by name (case-sensitive)
+find /var -name "*.log"
+
+# Find by name (case-insensitive)
+find /home -iname "*.jpg"
+
+# Find by type: f=file, d=directory, l=symlink
+find /etc -type f -name "*.conf"
+find /usr -type d -name "bin"
+find /usr -type l
+
+# Find by size
+find / -type f -size +100M          # larger than 100 MiB
+find /tmp -type f -size -1k         # smaller than 1 KiB
+find . -type f -size 0              # empty files
+
+# Find by modification time
+find /var/log -mtime -1             # modified in last 24 hours
+find /tmp -mtime +30                # modified more than 30 days ago
+find . -mmin -60                    # modified in last 60 minutes
+find . -newer reference.txt         # modified after reference.txt
+
+# Find by permissions
+find / -perm -4000 -type f          # files with SUID bit
+find / -perm -2000 -type f          # files with SGID bit
+find . -perm 777                    # exact match: rwxrwxrwx
+find . -perm -u+x -type f          # user-executable files
+
+# Find by owner/group
+find /home -user alice
+find /var -group www-data
+
+# Find empty files and directories
+find . -empty
+
+# Combine conditions
+find /var -name "*.log" -size +10M -mtime -7
+find . -name "*.tmp" -o -name "*.bak"         # OR
+find . -not -name "*.go"                       # NOT
+find . \( -name "*.c" -o -name "*.h" \) -type f
+
+# Execute commands on results
+find . -name "*.tmp" -delete
+find . -name "*.log" -exec gzip {} \;
+find . -type f -exec chmod 644 {} +
+find . -name "*.sh" -exec grep -l "TODO" {} +
+
+# Print with custom format
+find . -type f -printf '%s %p\n'               # size and path
+find . -type f -printf '%T@ %p\n' | sort -rn   # sort by mtime
+
+# Limit search depth
+find . -maxdepth 2 -name "*.go"
+find . -mindepth 1 -maxdepth 1 -type d         # immediate subdirs only
+
+# Stay on one filesystem (don't cross mount boundaries)
+find / -xdev -name "*.conf"
+
+# Exclude directories
+find . -path ./vendor -prune -o -name "*.go" -print
+find . -not -path "./.git/*" -name "*.txt"
+
+@text
+locate / plocate — fast indexed file search. Queries a pre-built database.
+
+@code bash
+# Install plocate (modern replacement for mlocate)
+sudo pacman -S plocate
+
+# Update the database (run as root or via timer)
+sudo updatedb
+
+# Search for files
+locate config.toml
+
+# Case-insensitive search
+locate -i readme
+
+# Use glob patterns
+locate "*.service"
+locate "/etc/*.conf"
+
+# Count matches instead of listing
+locate -c "*.go"
+
+# Show only files that still exist
+locate -e "pattern"
+
+# Limit number of results
+locate -l 10 "*.log"
+
+# Use regex
+locate -r '/etc/.*\.conf$'
+
+# Enable plocate timer for automatic updates (OpenRC cron or timer)
+# Add to crontab: 0 * * * * /usr/bin/updatedb
+
+@text
+Identify command locations and types.
+
+@code bash
+# which — find executable in PATH
+which python
+which -a python              # show all matches in PATH
+
+# whereis — locate binary, source, and man page
+whereis gcc
+whereis -b gcc               # binary only
+whereis -m gcc               # man page only
+
+# type — show how the shell interprets a command
+type ls                      # alias, builtin, file, or function
+type -a ls                   # all definitions
+type -t ls                   # just the type word (alias/builtin/file/function/keyword)
+
+# command -v — POSIX-portable alternative to which
+command -v python
+
+# Trace the full chain (alias -> function -> binary)
+type ls                      # ls is aliased to 'ls --color=auto'
+which ls                     # /usr/bin/ls
+file /usr/bin/ls             # ELF 64-bit executable
+
+# Find all commands matching a pattern
+compgen -c | grep docker     # bash completion list

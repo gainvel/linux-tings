@@ -1,0 +1,101 @@
+---
+title: Package Signing
+order: 8
+description: pacman-key --init, --populate, --recv-keys
+tags: [pacman, key, gpg, signing, keyring, trust]
+---
+
+pacman uses GnuPG to verify package signatures. The keyring must be
+initialized and populated for package installation to work.
+
+@code bash
+# ---- keyring initialization ----
+
+pacman-key --init                         # initialize the keyring
+pacman-key --populate archlinux           # add Arch Linux keys
+pacman-key --populate artix               # add Artix Linux keys
+
+# both at once (typical Artix setup)
+pacman-key --init
+pacman-key --populate archlinux artix
+
+@code bash
+# ---- managing keys ----
+
+# list keys
+pacman-key --list-keys                    # all keys
+pacman-key --list-sigs                    # keys with signatures
+
+# receive a specific key from a keyserver
+pacman-key --recv-keys KEYID
+pacman-key --finger KEYID                 # show fingerprint
+
+# locally sign a key (trust it)
+pacman-key --lsign-key KEYID
+
+# delete a key
+pacman-key --delete KEYID
+
+@code bash
+# ---- refresh and update keys ----
+
+# refresh all keys from keyserver
+pacman-key --refresh-keys
+
+# update the keyring packages (often fixes key issues)
+pacman -Sy archlinux-keyring artix-keyring
+pacman -Su
+
+@text
+Common key-related error messages:
+
+@code bash
+# "error: GPGME error: No data"
+# or "error: required key missing from keyring"
+
+# Fix: re-initialize and re-populate
+pacman-key --init
+pacman-key --populate archlinux artix
+
+# "error: <package>: signature from ... is unknown trust"
+
+# Fix: receive and sign the specific key
+pacman-key --recv-keys KEYID
+pacman-key --lsign-key KEYID
+
+# "error: <package>: signature from ... is marginal trust"
+
+# Fix: locally sign the key to fully trust it
+pacman-key --lsign-key KEYID
+
+@code bash
+# ---- signature verification settings ----
+
+# /etc/pacman.conf
+# SigLevel = Required DatabaseOptional
+#   Required         = packages must be signed
+#   DatabaseOptional = database signatures are optional
+#   TrustAll         = trust any key (dangerous, never use)
+#   PackageRequired  = only packages need signatures
+#   Never            = disable checking (dangerous)
+
+@text
+If you are having persistent key issues:
+
+@code bash
+# nuclear option: rebuild the entire keyring
+rm -rf /etc/pacman.d/gnupg
+pacman-key --init
+pacman-key --populate archlinux artix
+
+# ensure correct time (wrong clock causes verification failures)
+date
+# if wrong, sync time:
+ntpd -qg                                 # one-shot time sync
+# or if using chrony/openntpd
+rc-service ntpd restart
+
+@text
+The keyring is stored in /etc/pacman.d/gnupg/. It is a standard GnuPG
+directory. The archlinux-keyring and artix-keyring packages provide the
+master keys and packager keys for their respective repositories.

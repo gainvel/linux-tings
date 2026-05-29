@@ -1,0 +1,148 @@
+---
+title: Attributes
+order: 5
+description: File metadata — stat, file, touch, truncate, shred
+tags: [files, stat, file, touch, truncate, shred, metadata]
+---
+
+Commands for inspecting and modifying file metadata, types, timestamps, and content.
+
+@text
+stat — display detailed file information.
+
+@code bash
+# Full file status
+stat filename
+
+# Human-readable format
+stat filename
+# Output includes: size, blocks, inode, links, permissions, uid, gid,
+#                  access time, modify time, change time, birth time
+
+# Custom format strings
+stat -c '%s' filename             # size in bytes
+stat -c '%U:%G' filename          # owner:group
+stat -c '%a %n' filename          # octal permissions and name
+stat -c '%A %n' filename          # symbolic permissions and name
+stat -c '%i' filename             # inode number
+stat -c '%h' filename             # hard link count
+stat -c '%y' filename             # modification time
+stat -c '%F' filename             # file type
+
+# Useful format: all key info on one line
+stat -c '%A %h %U %G %s %y %n' filename
+
+# Stat a filesystem (not a file)
+stat -f /home
+
+# Filesystem format strings
+stat -f -c '%T' /                 # filesystem type
+stat -f -c '%b %a' /              # total blocks, available blocks
+
+@text
+file — determine file type by content inspection (not extension).
+
+@code bash
+# Identify file type
+file document.pdf
+file mystery_file
+file /usr/bin/ls
+
+# Brief output (just the type)
+file -b filename
+
+# MIME type output
+file --mime-type filename
+
+# MIME type and encoding
+file --mime filename
+
+# Check multiple files
+file *
+
+# Follow symlinks
+file -L linkname
+
+# Read file list from stdin
+find . -type f | file -f -
+
+# Don't access the filesystem, read from stdin
+cat mystery_file | file -
+
+@text
+touch — create files or update timestamps.
+
+@code bash
+# Create an empty file (or update timestamps if exists)
+touch newfile.txt
+
+# Create multiple files
+touch file1.txt file2.txt file3.txt
+
+# Set specific modification time
+touch -t 202401011200.00 file.txt    # YYYYMMDDhhmm.ss
+
+# Set time using date string
+touch -d "2024-01-15 14:30:00" file.txt
+touch -d "yesterday" file.txt
+touch -d "2 hours ago" file.txt
+
+# Update only access time
+touch -a file.txt
+
+# Update only modification time
+touch -m file.txt
+
+# Copy timestamps from another file
+touch -r reference.txt target.txt
+
+# Don't create file if it doesn't exist
+touch -c nonexistent.txt
+
+@text
+truncate — shrink or extend file size.
+
+@code bash
+# Truncate file to zero bytes (empty it, faster than > file)
+truncate -s 0 logfile.txt
+
+# Set file to specific size (pads with null bytes if growing)
+truncate -s 1G largefile.img
+
+# Shrink file to 100 MiB
+truncate -s 100M largefile.img
+
+# Grow or shrink relative to current size
+truncate -s +10M file.img     # grow by 10 MiB
+truncate -s -5M file.img      # shrink by 5 MiB
+
+# Create a sparse file (allocated but no disk blocks used)
+truncate -s 10G sparse.img
+
+@text
+shred — securely overwrite file data before deletion.
+
+@code bash
+# Overwrite and delete a file (3 passes + zero pass)
+shred -vuz filename
+
+# Overwrite with N passes
+shred -vn 5 filename
+
+# Overwrite but don't delete
+shred -v filename
+
+# Overwrite specific size (useful for devices)
+shred -v -n 1 -s 1G /dev/sda1
+
+# Note: shred is ineffective on:
+#   - journaling filesystems (ext3/4 journal, btrfs COW)
+#   - SSDs (wear leveling redistributes writes)
+#   - filesystems with snapshots or RAID
+# For SSDs, use: hdparm --security-erase or blkdiscard
+# For full disk: blkdiscard /dev/sdX  (instant on SSDs)
+
+@code bash
+# Secure alternatives for SSDs
+sudo blkdiscard /dev/sda           # TRIM entire device (instant)
+sudo blkdiscard -s /dev/sda        # Secure discard if supported

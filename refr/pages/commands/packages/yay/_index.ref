@@ -1,0 +1,10 @@
+---
+title: Yay (AUR)
+order: 2
+description: AUR package management
+tags: [yay, aur, arch user repository]
+---
+
+yay is an AUR helper that wraps pacman and adds support for the Arch User
+Repository. It handles downloading PKGBUILDs, building packages, and
+managing AUR updates alongside official packages.

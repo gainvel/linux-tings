@@ -1,0 +1,115 @@
+---
+title: Imaging
+order: 6
+description: Disk cloning, imaging with dd, partclone, and ISO writing
+tags: [disk, dd, partclone, clone, imaging, iso]
+---
+
+Tools for low-level disk and partition copying, backup images, and writing bootable media.
+
+@text
+dd — byte-level copy. Powerful but unforgiving. Double-check device names.
+
+@code bash
+# Clone entire disk to another disk
+sudo dd if=/dev/sda of=/dev/sdb bs=64K status=progress conv=fsync
+
+# Create a compressed disk image
+sudo dd if=/dev/sda bs=64K status=progress | gzip > disk.img.gz
+
+# Restore compressed image to disk
+gunzip -c disk.img.gz | sudo dd of=/dev/sda bs=64K status=progress conv=fsync
+
+# Clone a single partition
+sudo dd if=/dev/sda1 of=partition.img bs=64K status=progress
+
+# Write an ISO to USB drive
+sudo dd if=archlinux.iso of=/dev/sdb bs=4M status=progress conv=fsync
+
+# Create a file full of zeros (for sparse file testing, swap, etc.)
+dd if=/dev/zero of=swapfile bs=1M count=4096 status=progress
+
+# Wipe first 1 MiB of a disk (destroy partition table)
+sudo dd if=/dev/zero of=/dev/sda bs=1M count=1
+
+# Read MBR (first 512 bytes)
+sudo dd if=/dev/sda of=mbr.bin bs=512 count=1
+
+# Key options:
+#   bs=SIZE        block size (larger = faster, 4M-64K typical)
+#   count=N        copy only N blocks
+#   status=progress  show transfer progress
+#   conv=fsync     flush data before finishing
+#   conv=noerror,sync  continue on read errors, pad with zeros
+#   iflag=direct   bypass page cache for reads
+#   oflag=direct   bypass page cache for writes
+
+@text
+Safer ISO writing with cp or cat (simpler than dd for ISOs).
+
+@code bash
+# Write ISO with cp (handles block size automatically)
+sudo cp archlinux.iso /dev/sdb
+sudo sync
+
+# Or with cat
+sudo cat archlinux.iso > /dev/sdb
+sudo sync
+
+@text
+partclone — filesystem-aware cloning (faster than dd, skips free space).
+
+@code bash
+# Install partclone
+sudo pacman -S partclone
+
+# Clone ext4 partition to image
+sudo partclone.ext4 -c -s /dev/sda1 -o sda1.img
+
+# Clone with compression
+sudo partclone.ext4 -c -s /dev/sda1 | gzip > sda1.img.gz
+
+# Restore from image
+sudo partclone.ext4 -r -s sda1.img -o /dev/sda1
+
+# Restore compressed image
+gunzip -c sda1.img.gz | sudo partclone.ext4 -r -o /dev/sda1
+
+# Clone btrfs partition
+sudo partclone.btrfs -c -s /dev/sda1 -o sda1.btrfs.img
+
+# Clone FAT32 (EFI partition)
+sudo partclone.fat32 -c -s /dev/sda1 -o efi.img
+
+# Filesystem-agnostic clone (copies all blocks like dd but with progress)
+sudo partclone.dd -s /dev/sda1 -o sda1.img
+
+@text
+Verify and check images.
+
+@code bash
+# Verify a dd image matches the source
+sudo dd if=/dev/sda1 bs=64K | md5sum
+md5sum partition.img
+
+# Generate checksum for an image
+sha256sum disk.img.gz > disk.img.gz.sha256
+
+# Verify checksum
+sha256sum -c disk.img.gz.sha256
+
+# Verify ISO integrity before writing
+sha256sum archlinux.iso
+
+@text
+Network cloning — clone over SSH.
+
+@code bash
+# Clone disk to a remote machine
+sudo dd if=/dev/sda bs=64K status=progress | ssh user@remote "dd of=/dev/sda bs=64K"
+
+# Clone with compression over network
+sudo dd if=/dev/sda bs=64K | gzip | ssh user@remote "gunzip | dd of=/dev/sda bs=64K"
+
+# Pull a remote disk image
+ssh user@remote "sudo dd if=/dev/sda bs=64K" | dd of=remote-disk.img bs=64K status=progress

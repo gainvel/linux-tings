@@ -1,0 +1,132 @@
+---
+title: SSH Basics
+order: 1
+description: ssh connection, ~/.ssh/config, options, escape sequences
+tags: [ssh, connection, config, remote]
+---
+
+Core SSH usage for connecting to remote hosts, configuring persistent
+settings, and controlling active sessions.
+
+@code bash
+# ---- basic connections ----
+
+ssh user@hostname                         # connect
+ssh user@hostname -p 2222                 # custom port
+ssh hostname                              # uses current username
+ssh user@192.168.1.10                     # by IP
+ssh user@hostname command                 # run single command and exit
+ssh user@hostname 'ls -la /var/log'       # remote command with args
+ssh -t user@hostname htop                 # force TTY allocation (interactive)
+
+@code bash
+# ---- common options ----
+
+ssh -v user@hostname                      # verbose (debug)
+ssh -vv user@hostname                     # more verbose
+ssh -vvv user@hostname                    # maximum verbosity
+ssh -i ~/.ssh/mykey user@hostname         # specify identity file
+ssh -o StrictHostKeyChecking=no user@host # skip host key check (first connect)
+ssh -o UserKnownHostsFile=/dev/null user@host    # don't save host key
+ssh -o ConnectTimeout=5 user@hostname     # connection timeout
+ssh -o ServerAliveInterval=60 user@host   # keepalive every 60s
+ssh -o ServerAliveCountMax=3 user@host    # disconnect after 3 missed keepalives
+ssh -N user@hostname                      # no remote command (for tunnels)
+ssh -f user@hostname -N                   # fork to background (for tunnels)
+ssh -q user@hostname                      # quiet mode
+
+@text
+~/.ssh/config provides persistent per-host settings. This avoids typing
+long option strings repeatedly.
+
+@code bash
+# ---- ~/.ssh/config ----
+
+# global defaults
+Host *
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+
+# named host
+Host myserver
+    HostName 192.168.1.10
+    User admin
+    Port 2222
+    IdentityFile ~/.ssh/id_myserver
+
+# wildcard
+Host *.dev.example.com
+    User developer
+    IdentityFile ~/.ssh/id_dev
+
+# jump host (ProxyJump)
+Host internal
+    HostName 10.0.0.5
+    User admin
+    ProxyJump jumphost
+
+Host jumphost
+    HostName bastion.example.com
+    User jump
+    Port 2222
+
+# connection reuse (multiplexing)
+Host *
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h:%p
+    ControlPersist 10m
+
+@text
+With the config above, `ssh myserver` connects to 192.168.1.10:2222 as
+admin using the specified key. Create the sockets directory:
+`mkdir -p ~/.ssh/sockets`
+
+@code bash
+# ---- escape sequences (during active session) ----
+
+# press Enter, then:
+~.                                        # disconnect (kill hung session)
+~^Z                                       # suspend session (fg to resume)
+~#                                        # list forwarded connections
+~&                                        # background session (on logout)
+~?                                        # show escape help
+~C                                        # open command line (add forwards on the fly)
+~~                                        # send literal ~ character
+
+# the ~C command line lets you add forwards mid-session:
+# ssh> -L 8080:localhost:80               # add local forward
+# ssh> -R 9090:localhost:80               # add remote forward
+# ssh> -KL 8080                           # cancel local forward
+
+@code bash
+# ---- known hosts management ----
+
+ssh-keygen -R hostname                    # remove host from known_hosts
+ssh-keygen -F hostname                    # find host in known_hosts
+ssh-keyscan hostname                      # fetch host public key
+ssh-keyscan -H hostname >> ~/.ssh/known_hosts    # add hashed entry
+
+@code bash
+# ---- SSH on Artix (OpenRC) ----
+
+# install
+pacman -S openssh
+
+# server (sshd)
+rc-service sshd start
+rc-update add sshd default                # start on boot
+
+# config location
+# /etc/ssh/sshd_config                    # server config
+# /etc/ssh/ssh_config                     # system-wide client config
+# ~/.ssh/config                           # per-user client config
+
+@text
+Security best practices:
+- Disable root login: `PermitRootLogin no` in sshd_config
+- Disable password auth: `PasswordAuthentication no` (use keys only)
+- Use a non-standard port to reduce noise (not a security measure)
+- Use `AllowUsers` or `AllowGroups` to restrict access
+- Keep SSH updated: `pacman -Syu openssh`

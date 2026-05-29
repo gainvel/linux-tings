@@ -1,0 +1,144 @@
+---
+title: Network Managers
+order: 7
+description: connmanctl, nmcli, nmtui
+tags: [connman, connmanctl, networkmanager, nmcli, nmtui]
+---
+
+ConnMan and NetworkManager are the two main network management daemons.
+ConnMan is lighter weight and common on Artix/OpenRC setups. NetworkManager
+is more feature-rich and integrates with KDE Plasma.
+
+@code bash
+# ---- ConnMan: connmanctl ----
+
+# OpenRC service
+rc-service connmand start
+rc-update add connmand default
+
+# connmanctl interactive mode
+connmanctl
+> technologies                            # list available technologies
+> enable wifi                             # enable wifi
+> scan wifi                               # scan for networks
+> services                                # list available services
+> agent on                                # enable authentication agent
+> connect wifi_xxxx_managed_psk           # connect (will prompt for passphrase)
+> disconnect wifi_xxxx_managed_psk        # disconnect
+> quit
+
+# connmanctl non-interactive
+connmanctl technologies
+connmanctl enable wifi
+connmanctl scan wifi
+connmanctl services
+connmanctl connect wifi_xxxx_managed_psk
+connmanctl disconnect wifi_xxxx_managed_psk
+
+@code bash
+# connmanctl service details
+connmanctl services wifi_xxxx_managed_psk   # full details of a service
+
+# static IP configuration
+connmanctl config wifi_xxxx_managed_psk --ipv4 manual 192.168.1.100 255.255.255.0 192.168.1.1
+connmanctl config wifi_xxxx_managed_psk --nameservers 8.8.8.8 1.1.1.1
+
+# back to DHCP
+connmanctl config wifi_xxxx_managed_psk --ipv4 dhcp
+
+# tethering
+connmanctl tether wifi on "HotspotName" "passphrase"
+connmanctl tether wifi off
+
+@text
+ConnMan stores profiles in /var/lib/connman/. Each service gets a
+directory with a settings file. You can edit these directly:
+
+@code bash
+# /var/lib/connman/wifi_xxxx_managed_psk/settings
+[wifi_xxxx_managed_psk]
+Name=MyNetwork
+Passphrase=secret
+AutoConnect=true
+Favorite=true
+
+@text
+NetworkManager is the alternative, especially useful with KDE Plasma where
+it provides the system tray network applet.
+
+@code bash
+# ---- NetworkManager: nmcli ----
+
+# OpenRC service
+rc-service NetworkManager start
+rc-update add NetworkManager default
+
+# general status
+nmcli general status                      # overall status
+nmcli device status                       # device list and state
+nmcli connection show                     # saved connections
+nmcli connection show --active            # active connections only
+
+@code bash
+# wifi
+nmcli device wifi list                    # scan and list networks
+nmcli device wifi connect "MyNetwork" password "secret"       # connect
+nmcli device wifi connect "MyNetwork" password "secret" ifname wlan0  # specific device
+nmcli device wifi connect "HiddenSSID" password "secret" hidden yes   # hidden network
+nmcli connection up "MyNetwork"           # activate saved connection
+nmcli connection down "MyNetwork"         # deactivate
+nmcli device disconnect wlan0             # disconnect device
+
+@code bash
+# connection management
+nmcli connection add type ethernet con-name "Work" ifname eth0 \
+  ipv4.method manual ipv4.addresses "192.168.1.100/24" \
+  ipv4.gateway "192.168.1.1" ipv4.dns "8.8.8.8 1.1.1.1"
+
+nmcli connection modify "Work" ipv4.dns "8.8.8.8"
+nmcli connection modify "Work" ipv4.method auto    # back to DHCP
+nmcli connection delete "Work"
+nmcli connection reload                   # reload from disk
+
+# VPN
+nmcli connection import type openvpn file client.ovpn
+nmcli connection up client
+
+@code bash
+# nmcli networking and radio control
+nmcli networking on                       # enable networking
+nmcli networking off                      # disable networking
+nmcli radio wifi on                       # enable wifi radio
+nmcli radio wifi off                      # disable wifi radio
+
+# hotspot
+nmcli device wifi hotspot ifname wlan0 ssid "MyHotspot" password "secret"
+
+# DNS
+nmcli device show eth0 | grep DNS        # show DNS servers
+
+@code bash
+# ---- nmtui: text user interface ----
+
+nmtui                                     # interactive TUI
+nmtui-connect                             # connect to a network
+nmtui-edit                                # edit connections
+nmtui-hostname                            # set hostname
+
+@text
+Do not run ConnMan and NetworkManager simultaneously. They will conflict
+over interface management. Choose one and disable the other.
+
+KDE Plasma integration: NetworkManager provides the plasma-nm applet in
+the system tray. If using ConnMan, the tray applet is connman-qt or
+cmst (ConnMan System Tray).
+
+@code bash
+# check which is running
+rc-status | grep -E 'connman|Network'
+
+# switch from ConnMan to NetworkManager
+rc-service connmand stop
+rc-update del connmand default
+rc-service NetworkManager start
+rc-update add NetworkManager default

@@ -1,0 +1,207 @@
+---
+title: sudo & Privileges
+order: 3
+description: sudo, visudo, sudoers syntax, NOPASSWD, env_keep
+tags: [sudo, visudo, sudoers, privileges, root, escalation]
+---
+
+sudo allows permitted users to run commands as root or another user, configured via /etc/sudoers.
+
+@text
+Basic sudo Usage
+
+@code bash
+# Run a command as root
+sudo pacman -Syu
+
+# Run as a specific user
+sudo -u postgres psql
+
+# Run with a login shell (load target user's environment)
+sudo -i
+sudo -i -u username
+
+# Run a shell as root (preserving current environment)
+sudo -s
+
+# Edit a file as root
+sudo -e /etc/fstab        # uses $SUDO_EDITOR or $EDITOR
+sudoedit /etc/fstab       # same thing
+
+# Run last command with sudo
+sudo !!
+
+# Check what you're allowed to run
+sudo -l
+
+# List another user's permissions
+sudo -l -U username
+
+# Validate/extend sudo timeout without running a command
+sudo -v
+
+# Invalidate sudo timestamp (require password next time)
+sudo -k
+
+# Fully invalidate (remove timestamp file)
+sudo -K
+
+# Run with preserved environment
+sudo -E command
+
+# Set a specific environment variable
+sudo VAR=value command
+
+@text
+visudo — Edit sudoers Safely
+
+@code bash
+# Edit /etc/sudoers (locks file, checks syntax before saving)
+sudo visudo
+
+# Edit a drop-in file (recommended for custom rules)
+sudo visudo -f /etc/sudoers.d/myconfig
+
+# Check syntax of a sudoers file
+sudo visudo -c
+sudo visudo -c -f /etc/sudoers.d/myconfig
+
+# ALWAYS use visudo — never edit sudoers directly
+# visudo validates syntax and prevents lockouts
+
+@text
+sudoers Syntax
+
+@code bash
+# Basic format:
+# WHO  WHERE = (AS_WHOM)  WHAT
+
+# Allow wheel group full sudo access
+%wheel ALL=(ALL:ALL) ALL
+
+# Allow a specific user full access
+username ALL=(ALL:ALL) ALL
+
+# Allow specific commands only
+username ALL=(ALL) /usr/bin/pacman, /usr/bin/mount
+
+# Allow without password
+username ALL=(ALL) NOPASSWD: ALL
+
+# NOPASSWD for specific commands only
+username ALL=(ALL) NOPASSWD: /usr/bin/pacman -Syu, /usr/bin/reboot
+
+# Allow running as specific user only
+username ALL=(postgres) /usr/bin/psql
+
+# Deny a specific command
+username ALL=(ALL) ALL, !/usr/bin/su
+
+@text
+Command Aliases
+
+@code bash
+# Define command aliases for reuse
+# Cmnd_Alias PACKAGE_MGMT = /usr/bin/pacman, /usr/bin/yay
+# Cmnd_Alias POWER = /usr/bin/reboot, /usr/bin/poweroff, /usr/bin/shutdown
+# Cmnd_Alias SERVICES = /usr/bin/rc-service, /usr/bin/rc-update
+
+# User_Alias ADMINS = alice, bob, charlie
+# Host_Alias SERVERS = server1, server2
+
+# Usage:
+# ADMINS ALL=(ALL) PACKAGE_MGMT, POWER, SERVICES
+
+@text
+NOPASSWD Configuration
+
+@code bash
+# Allow all commands without password (user)
+username ALL=(ALL) NOPASSWD: ALL
+
+# Allow all commands without password (group)
+%wheel ALL=(ALL) NOPASSWD: ALL
+
+# Specific commands without password
+username ALL=(ALL) NOPASSWD: /usr/bin/pacman -Syu
+username ALL=(ALL) NOPASSWD: /usr/bin/rc-service * restart
+
+# Mix password and no-password rules
+# (NOPASSWD must come before the commands it applies to)
+username ALL=(ALL) ALL
+username ALL=(ALL) NOPASSWD: /usr/bin/mount, /usr/bin/umount
+
+@text
+Environment and Security
+
+@code bash
+# Preserve specific environment variables
+# Defaults env_keep += "HOME EDITOR VISUAL"
+# Defaults env_keep += "http_proxy https_proxy no_proxy"
+
+# Reset environment (more secure, default)
+# Defaults env_reset
+
+# Set PATH for sudo commands
+# Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Set a custom editor for visudo
+# Defaults editor="/usr/bin/nvim"
+
+# Set password timeout (minutes, 0 = always ask)
+# Defaults timestamp_timeout=15
+
+# Require password per-terminal (not per-user)
+# Defaults timestamp_type=tty
+
+# Log all sudo commands
+# Defaults logfile="/var/log/sudo.log"
+# Defaults log_input, log_output
+# Defaults iolog_dir="/var/log/sudo-io/%{user}"
+
+# Lecture on first use
+# Defaults lecture=always
+
+@text
+Drop-in Files — /etc/sudoers.d/
+
+@code bash
+# Recommended approach: use files in /etc/sudoers.d/
+# instead of editing /etc/sudoers directly
+
+# Ensure /etc/sudoers includes the directory:
+# @includedir /etc/sudoers.d
+
+# Create a drop-in config
+sudo visudo -f /etc/sudoers.d/10-wheel
+# %wheel ALL=(ALL:ALL) ALL
+
+sudo visudo -f /etc/sudoers.d/20-nopasswd
+# username ALL=(ALL) NOPASSWD: /usr/bin/pacman
+
+# File naming: avoid dots and tildes in names
+# Files with ~ or . are ignored by sudo
+
+# Set permissions (must be 0440)
+sudo chmod 0440 /etc/sudoers.d/*
+
+@text
+Troubleshooting
+
+@code bash
+# "username is not in the sudoers file"
+# Solution: add user to wheel group
+sudo usermod -aG wheel username
+
+# "sorry, you must have a tty to run sudo"
+# Add to sudoers: Defaults !requiretty
+
+# Lock yourself out of sudo
+# Boot into single-user mode or use root from recovery
+# Edit /etc/sudoers directly as root
+
+# Check for syntax errors
+sudo visudo -c
+
+# Debug sudo
+sudo -ll              # detailed permissions listing

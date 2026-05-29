@@ -1,0 +1,139 @@
+---
+title: DNS
+order: 3
+description: dig, nslookup, host, /etc/resolv.conf, resolvconf
+tags: [dns, dig, nslookup, host, resolv.conf, resolvconf, nameserver]
+---
+
+DNS query tools and resolver configuration. dig (from bind-tools) is the
+most capable; host is quick and simple.
+
+@code bash
+# ---- dig: DNS lookup utility ----
+
+dig example.com                           # A record (default)
+dig example.com AAAA                      # IPv6 address
+dig example.com MX                        # mail exchange
+dig example.com NS                        # nameservers
+dig example.com TXT                       # TXT records
+dig example.com SOA                       # start of authority
+dig example.com ANY                       # all records (often blocked)
+dig example.com CNAME                     # canonical name
+
+# query specific server
+dig @8.8.8.8 example.com                  # query Google DNS
+dig @1.1.1.1 example.com                  # query Cloudflare
+
+# useful options
+dig +short example.com                    # terse output
+dig +noall +answer example.com            # answer section only
+dig +trace example.com                    # full delegation trace from root
+dig +tcp example.com                      # force TCP
+dig +dnssec example.com                   # request DNSSEC records
+
+# reverse lookup
+dig -x 93.184.216.34                      # PTR record
+
+# batch queries
+dig -f queryfile.txt                      # one domain per line
+
+# AXFR zone transfer (if permitted)
+dig @ns1.example.com example.com AXFR
+
+@code bash
+# ---- nslookup ----
+
+nslookup example.com                      # basic lookup
+nslookup example.com 8.8.8.8             # use specific server
+nslookup -type=mx example.com             # MX records
+nslookup -type=ns example.com             # NS records
+nslookup -type=txt example.com            # TXT records
+nslookup -type=soa example.com            # SOA record
+nslookup -type=ptr 34.216.184.93.in-addr.arpa   # reverse
+
+@code bash
+# ---- host: simple DNS lookup ----
+
+host example.com                          # A + MX + NS
+host -t AAAA example.com                  # IPv6
+host -t MX example.com                    # mail
+host -t TXT example.com                   # TXT
+host -a example.com                       # all (verbose)
+host 93.184.216.34                        # reverse lookup
+host -T example.com                       # use TCP
+host example.com 8.8.8.8                  # specific server
+
+@text
+/etc/resolv.conf controls the system resolver. On many setups this file is
+managed by dhcpcd, NetworkManager, ConnMan, or resolvconf. Editing it
+directly may be overwritten.
+
+@code bash
+# ---- /etc/resolv.conf ----
+
+# typical contents
+nameserver 192.168.1.1                    # primary DNS
+nameserver 8.8.8.8                        # secondary DNS
+search home.lan                           # search domain
+options timeout:2 attempts:3              # resolver options
+options rotate                            # round-robin nameservers
+options edns0                             # enable EDNS0
+
+# check current DNS
+cat /etc/resolv.conf
+
+# prevent overwriting (not recommended long-term)
+chattr +i /etc/resolv.conf                # make immutable
+chattr -i /etc/resolv.conf                # remove immutable
+
+@code bash
+# ---- resolvconf: resolver config framework ----
+
+# install openresolv (Arch/Artix)
+pacman -S openresolv
+
+# resolvconf integrates with dhcpcd, wpa_supplicant, openvpn
+# configuration in /etc/resolvconf.conf
+
+resolvconf -u                             # update resolv.conf from inputs
+resolvconf -l                             # list current configurations
+resolvconf -d eth0                        # delete interface entry
+
+@text
+Common public DNS servers:
+
+@code bash
+# Google
+8.8.8.8       2001:4860:4860::8888
+8.8.4.4       2001:4860:4860::8844
+
+# Cloudflare
+1.1.1.1       2606:4700:4700::1111
+1.0.0.1       2606:4700:4700::1001
+
+# Quad9 (malware blocking)
+9.9.9.9       2620:fe::fe
+
+# OpenDNS
+208.67.222.222
+208.67.220.220
+
+@text
+Troubleshooting DNS:
+
+@code bash
+# test resolution at each level
+dig +trace example.com                    # full delegation path
+dig @127.0.0.1 example.com               # test local resolver
+dig @192.168.1.1 example.com             # test gateway DNS
+
+# check if DNS is the problem
+ping 8.8.8.8                              # works = network ok, DNS may be bad
+ping google.com                           # fails = DNS problem
+
+# flush DNS cache (if using a local caching resolver)
+# systemd-resolved (not on Artix by default)
+# resolvectl flush-caches
+
+# dnsmasq
+killall -HUP dnsmasq

@@ -1,0 +1,131 @@
+---
+title: EFI Boot
+order: 3
+description: efibootmgr, ESP layout, boot entries, boot order
+tags: [efi, uefi, efibootmgr, esp, boot-entries]
+---
+
+EFI boot management with efibootmgr. The EFI System Partition (ESP) stores bootloaders and firmware data.
+
+@text
+ESP Layout
+
+The EFI System Partition is typically FAT32, mounted at /boot/efi or /boot.
+
+@code bash
+# Find the ESP
+findmnt /boot/efi
+# or
+fdisk -l | grep "EFI System"
+
+# Typical ESP layout:
+# /boot/efi/
+#   EFI/
+#     GRUB/
+#       grubx64.efi        # GRUB bootloader
+#     BOOT/
+#       BOOTX64.EFI        # Fallback bootloader
+#     Microsoft/            # Windows (dual-boot)
+#       Boot/
+#         bootmgfw.efi
+
+# Check ESP filesystem
+sudo file -sL /dev/sda1
+sudo fsck.fat -n /dev/sda1
+
+@text
+efibootmgr — View Boot Configuration
+
+@code bash
+# Show all boot entries and order
+efibootmgr
+
+# Verbose output with file paths
+efibootmgr -v
+
+# Example output:
+# BootCurrent: 0001
+# Timeout: 3 seconds
+# BootOrder: 0001,0000,0002
+# Boot0000* Windows Boot Manager  HD(1,...)/File(\EFI\Microsoft\Boot\bootmgfw.efi)
+# Boot0001* GRUB                  HD(1,...)/File(\EFI\GRUB\grubx64.efi)
+# Boot0002* UEFI: USB Drive       ...
+
+@text
+Managing Boot Entries
+
+@code bash
+# Create a new boot entry
+sudo efibootmgr --create \
+  --disk /dev/sda \
+  --part 1 \
+  --loader /EFI/GRUB/grubx64.efi \
+  --label "GRUB" \
+  --verbose
+
+# Create entry with kernel parameters (EFISTUB — no bootloader)
+sudo efibootmgr --create \
+  --disk /dev/sda \
+  --part 1 \
+  --loader /vmlinuz-linux \
+  --label "Artix Linux" \
+  --unicode "root=/dev/sda2 rw initrd=\initramfs-linux.img" \
+  --verbose
+
+# Delete a boot entry (by number)
+sudo efibootmgr --delete-bootnum --bootnum 0003
+
+# Delete a specific entry (be careful with the number)
+sudo efibootmgr -b 0003 -B
+
+@text
+Boot Order
+
+@code bash
+# Set boot order (comma-separated entry numbers)
+sudo efibootmgr --bootorder 0001,0000,0002
+
+# Set next-boot-only entry (one-time override)
+sudo efibootmgr --bootnext 0000
+
+# Set timeout (seconds)
+sudo efibootmgr --timeout 5
+
+# Disable timeout (boot immediately)
+sudo efibootmgr --timeout 0
+
+@text
+Enable/Disable Entries
+
+@code bash
+# Disable an entry (skip in boot order without deleting)
+sudo efibootmgr --inactive --bootnum 0002
+
+# Re-enable an entry
+sudo efibootmgr --active --bootnum 0002
+
+@text
+Troubleshooting
+
+@code bash
+# If no EFI variables available (running in BIOS mode or missing module)
+ls /sys/firmware/efi/efivars/
+# Empty or missing = not booted in EFI mode
+
+# Load efivarfs if needed
+sudo modprobe efivarfs
+sudo mount -t efivarfs efivarfs /sys/firmware/efi/efivars/
+
+# Repair: copy bootloader to fallback path
+sudo cp /boot/efi/EFI/GRUB/grubx64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI
+
+# Re-install GRUB EFI entry after firmware reset
+sudo grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+sudo efibootmgr -v   # verify it was added
+
+# Clean up duplicate/stale entries
+efibootmgr -v         # identify stale entry numbers
+sudo efibootmgr -b 0005 -B   # remove stale entry
+
+# Backup EFI variables
+efibootmgr -v > ~/efi-backup.txt

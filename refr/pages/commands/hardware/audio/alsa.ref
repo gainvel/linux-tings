@@ -1,0 +1,131 @@
+---
+title: ALSA
+order: 2
+description: ALSA mixer, playback, recording, and configuration
+tags: [audio, alsa, alsamixer, amixer, aplay, arecord, alsactl]
+---
+
+ALSA (Advanced Linux Sound Architecture) is the kernel-level sound
+system. Even with PipeWire, ALSA provides the low-level device access.
+
+@code bash
+# Install ALSA utilities
+sudo pacman -S alsa-utils
+
+@text
+alsamixer is the ncurses-based mixer for interactive volume control.
+
+@code bash
+# Open interactive mixer
+alsamixer                        # default card
+alsamixer -c 0                   # specific card number
+alsamixer -c PCH                 # by card name
+
+# Navigation inside alsamixer:
+#   Left/Right  - select control
+#   Up/Down     - adjust volume
+#   M           - mute/unmute
+#   F3          - playback controls
+#   F4          - capture controls
+#   F5          - all controls
+#   Esc/Q       - quit
+
+@text
+amixer is the command-line mixer for scripting and keybindings.
+
+@code bash
+# Show all controls
+amixer
+amixer -c 0                      # specific card
+amixer scontrols                 # list simple mixer controls
+amixer scontents                 # show all controls with values
+
+# Get/set volume
+amixer get Master
+amixer set Master 80%            # set to 80%
+amixer set Master 5%+            # increase by 5%
+amixer set Master 5%-            # decrease by 5%
+
+# Mute/unmute
+amixer set Master mute
+amixer set Master unmute
+amixer set Master toggle
+
+# Capture (microphone) controls
+amixer set Capture 80%
+amixer set Capture cap            # enable capture
+amixer set Capture nocap          # disable capture
+
+@text
+aplay and arecord handle PCM playback and recording at the ALSA level.
+
+@code bash
+# List sound cards and devices
+aplay -l                         # list playback devices
+aplay -L                         # list PCM devices (with aliases)
+arecord -l                       # list capture devices
+
+# Play audio
+aplay file.wav                   # play WAV file
+aplay -D hw:0,0 file.wav        # specific hardware device
+aplay -D default file.wav       # default device
+
+# Record audio
+arecord -f cd output.wav         # CD quality (16-bit, 44.1kHz, stereo)
+arecord -d 10 output.wav        # record for 10 seconds
+arecord -f S16_LE -r 48000 -c 2 output.wav   # explicit format
+arecord -vv /dev/null            # VU meter (test microphone levels)
+
+# List supported formats
+aplay --dump-hw-params -D hw:0,0 /dev/null
+
+@text
+Speaker test generates test tones to verify output channels.
+
+@code bash
+# Test speakers
+speaker-test                     # default: front left/right
+speaker-test -c 2                # stereo
+speaker-test -c 6                # 5.1 surround
+speaker-test -t wav              # use WAV samples instead of pink noise
+speaker-test -D hw:0,0           # specific device
+
+@text
+alsactl saves and restores mixer state.
+
+@code bash
+# Save current mixer state
+sudo alsactl store               # saves to /var/lib/alsa/asound.state
+
+# Restore mixer state
+sudo alsactl restore
+
+# Initialize cards to default
+sudo alsactl init
+
+# OpenRC service handles save/restore at boot/shutdown
+sudo rc-update add alsasound boot
+
+@text
+ALSA configuration files for persistent settings.
+
+@code bash
+# System-wide: /etc/asound.conf
+# Per-user: ~/.asoundrc
+
+# Set default card (in ~/.asoundrc)
+# defaults.pcm.card 1
+# defaults.ctl.card 1
+
+# Or using named device:
+# pcm.!default {
+#     type hw
+#     card PCH
+# }
+# ctl.!default {
+#     type hw
+#     card PCH
+# }
+
+# List card names and numbers
+cat /proc/asound/cards

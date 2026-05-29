@@ -1,0 +1,111 @@
+---
+title: Desktop Shell
+order: 1
+description: Plasmashell, activities, virtual desktops, widgets
+tags: [plasma, plasmashell, activities, desktops, widgets, panels]
+---
+
+Plasmashell is the main Plasma desktop process handling panels, widgets, wallpaper, and the system tray.
+
+@text
+Restarting Plasmashell
+
+Kill and restart the shell without logging out. Useful after config changes or when the desktop becomes unresponsive.
+
+@code bash
+# Restart plasmashell (Plasma 5/6)
+kquitapp5 plasmashell || killall plasmashell
+kstart5 plasmashell &
+
+# Plasma 6 variant
+kquitapp6 plasmashell || killall plasmashell
+kstart plasmashell &
+
+# Quick one-liner restart
+plasmashell --replace &disown
+
+@text
+Virtual Desktops
+
+Manage virtual desktops from the command line via D-Bus or qdbus.
+
+@code bash
+# List current virtual desktops (Plasma 5 — KWin D-Bus)
+qdbus org.kde.KWin /VirtualDesktopManager org.kde.KWin.VirtualDesktopManager.desktops
+
+# Get number of virtual desktops
+qdbus org.kde.KWin /VirtualDesktopManager org.kde.KWin.VirtualDesktopManager.count
+
+# Create a new virtual desktop (name, position)
+qdbus org.kde.KWin /VirtualDesktopManager org.kde.KWin.VirtualDesktopManager.createDesktop 4 "Desktop 5"
+
+# Remove a virtual desktop by ID
+qdbus org.kde.KWin /VirtualDesktopManager org.kde.KWin.VirtualDesktopManager.removeDesktop "desktop-id"
+
+# Switch to a specific desktop (1-indexed)
+qdbus org.kde.KWin /KWin org.kde.KWin.setCurrentDesktop 2
+
+# Get current desktop number
+qdbus org.kde.KWin /KWin org.kde.KWin.currentDesktop
+
+@text
+Activities
+
+Activities provide separate workspace contexts with independent widgets and wallpapers.
+
+@code bash
+# List activities
+qdbus org.kde.ActivityManager /ActivityManager/Activities ListActivities
+
+# Get current activity ID
+qdbus org.kde.ActivityManager /ActivityManager/Activities CurrentActivity
+
+# Create a new activity (returns ID)
+qdbus org.kde.ActivityManager /ActivityManager/Activities AddActivity "Development"
+
+# Switch to an activity by ID
+qdbus org.kde.ActivityManager /ActivityManager/Activities SetCurrentActivity "activity-id"
+
+# Stop an activity (unload from memory)
+qdbus org.kde.ActivityManager /ActivityManager/Activities StopActivity "activity-id"
+
+# Remove an activity
+qdbus org.kde.ActivityManager /ActivityManager/Activities RemoveActivity "activity-id"
+
+@text
+Widgets (Plasmoids)
+
+Manage desktop and panel widgets. Widgets can be added/removed via the GUI or scripting.
+
+@code bash
+# List installed widgets/plasmoids
+plasmapkg2 -l --type plasmoid
+
+# Install a plasmoid from file
+plasmapkg2 -i /path/to/widget.plasmoid
+
+# Remove an installed plasmoid
+plasmapkg2 -r org.kde.plasma.widgetname
+
+# Upgrade an installed plasmoid
+plasmapkg2 -u /path/to/widget.plasmoid
+
+# Plasma 6 uses kpackagetool6
+kpackagetool6 -l --type Plasma/Applet
+kpackagetool6 -i /path/to/widget.plasmoid
+
+@text
+Panel Management
+
+Panels can be configured via D-Bus scripting or the interactive panel editor.
+
+@code bash
+# Open panel toolbox (right-click panel > "Enter Edit Mode")
+# Programmatic panel creation via Plasma scripting console:
+# Desktop right-click > Enter Edit Mode > Add Panel
+
+# Launch the Plasma scripting console (for complex automation)
+plasmawindowed org.kde.plasma.calculator   # test a widget standalone
+
+# Lock/unlock widgets
+qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.setDashboardShown false

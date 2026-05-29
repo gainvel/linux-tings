@@ -1,0 +1,142 @@
+---
+title: dmesg
+order: 3
+description: dmesg, kernel ring buffer, filtering, follow
+tags: [dmesg, kernel, ring-buffer, logs, debug]
+---
+
+dmesg reads the kernel ring buffer — the primary source for hardware, driver, and early boot messages.
+
+@text
+Basic Usage
+
+@code bash
+# Print all kernel messages
+dmesg
+
+# Print with human-readable timestamps
+dmesg -T
+
+# Print with timestamps and color
+dmesg -T --color=always
+
+# Print with ISO timestamps
+dmesg --time-format=iso
+
+# Follow new messages in real-time (like tail -f)
+dmesg -w
+dmesg -wT    # follow with human timestamps
+
+# Show only new messages since last read
+dmesg -c     # print and clear (requires root)
+
+@text
+Filtering by Level
+
+Log levels from 0 (most critical) to 7 (debug).
+
+@code bash
+# Show only errors and worse
+dmesg --level=err
+dmesg -l err
+
+# Show warnings and errors
+dmesg -l warn,err
+
+# Show only critical/emergency
+dmesg -l emerg,alert,crit
+
+# Log levels:
+# emerg (0)  — system is unusable
+# alert (1)  — immediate action required
+# crit  (2)  — critical conditions
+# err   (3)  — error conditions
+# warn  (4)  — warning conditions
+# notice(5)  — normal but significant
+# info  (6)  — informational
+# debug (7)  — debug messages
+
+@text
+Filtering by Facility
+
+@code bash
+# Show only kernel messages
+dmesg -f kern
+
+# Show only user-space messages
+dmesg -f user
+
+# Show only daemon messages
+dmesg -f daemon
+
+# Available facilities:
+# kern, user, mail, daemon, auth, syslog, lpr, news
+
+@text
+Searching and Filtering
+
+@code bash
+# Search for specific hardware
+dmesg | grep -i usb
+dmesg | grep -i nvidia
+dmesg | grep -i "error\|fail\|warn"
+
+# Show messages from the last boot only (ring buffer is per-boot)
+dmesg -T | head -50
+
+# Find network interface messages
+dmesg | grep -iE "eth|enp|wlan|wlp|net"
+
+# Find disk/storage messages
+dmesg | grep -iE "sd[a-z]|nvme|ata|scsi"
+
+# Find filesystem messages
+dmesg | grep -iE "ext4|btrfs|xfs|mount"
+
+# Show the last N lines
+dmesg | tail -20
+
+# Show first N lines (early boot)
+dmesg | head -30
+
+@text
+Clearing and Buffer Info
+
+@code bash
+# Clear the ring buffer (requires root)
+sudo dmesg -C
+
+# Print then clear
+sudo dmesg -c
+
+# Show buffer size
+dmesg -s 1048576    # set read buffer size (bytes)
+
+# Check kernel log buffer size (set at boot)
+cat /proc/cmdline | grep -o "log_buf_len=[^ ]*"
+
+@text
+Practical Examples
+
+@code bash
+# Diagnose USB device detection
+dmesg -wT | grep -i usb
+# Then plug in the device
+
+# Check for hardware errors after boot
+dmesg -T -l err,crit,alert,emerg
+
+# Find when a device was detected
+dmesg -T | grep -i "new high-speed USB"
+
+# Check memory info at boot
+dmesg | grep -i "memory\|mem"
+
+# Check CPU info
+dmesg | grep -i "cpu\|microcode"
+
+# Find out of memory (OOM) kills
+dmesg -T | grep -i "out of memory\|oom"
+
+# Monitor for thermal events
+dmesg -wT | grep -i "thermal\|temperature"

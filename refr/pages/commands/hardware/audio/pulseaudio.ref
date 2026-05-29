@@ -1,0 +1,161 @@
+---
+title: PulseAudio Compat
+order: 3
+description: pactl and pacmd via PipeWire compatibility layer
+tags: [audio, pulseaudio, pactl, pacmd, pipewire-pulse]
+---
+
+PipeWire provides a PulseAudio compatibility layer (pipewire-pulse) so
+existing PulseAudio tools and applications work without modification.
+pactl is the most commonly used tool for audio management.
+
+@code bash
+# Verify PipeWire is serving as PulseAudio
+pactl info | grep "Server Name"
+# Output: Server Name: PulseAudio (on PipeWire x.y.z)
+
+# Ensure pipewire-pulse is installed
+sudo pacman -S pipewire-pulse
+
+@text
+Listing sinks (outputs), sources (inputs), and streams.
+
+@code bash
+# List audio outputs (sinks)
+pactl list sinks short
+pactl list sinks                 # detailed info
+
+# List audio inputs (sources)
+pactl list sources short
+pactl list sources               # detailed info
+
+# List active playback streams
+pactl list sink-inputs short
+
+# List active recording streams
+pactl list source-outputs short
+
+# List available cards
+pactl list cards short
+
+# List loaded modules
+pactl list modules short
+
+@text
+Volume control with pactl. Sink/source can be specified by index number
+or name.
+
+@code bash
+# Set sink volume (output)
+pactl set-sink-volume @DEFAULT_SINK@ 50%      # set to 50%
+pactl set-sink-volume @DEFAULT_SINK@ +5%      # increase by 5%
+pactl set-sink-volume @DEFAULT_SINK@ -5%      # decrease by 5%
+pactl set-sink-volume 0 80%                   # by index
+
+# Mute/unmute sink
+pactl set-sink-mute @DEFAULT_SINK@ toggle
+pactl set-sink-mute @DEFAULT_SINK@ 1          # mute
+pactl set-sink-mute @DEFAULT_SINK@ 0          # unmute
+
+# Set source volume (input/microphone)
+pactl set-source-volume @DEFAULT_SOURCE@ 80%
+pactl set-source-mute @DEFAULT_SOURCE@ toggle
+
+# Set volume on a specific stream
+pactl set-sink-input-volume <stream-id> 60%
+pactl set-sink-input-mute <stream-id> toggle
+
+@text
+Setting defaults and moving streams between devices.
+
+@code bash
+# Set default output sink
+pactl set-default-sink <sink-name-or-id>
+
+# Set default input source
+pactl set-default-source <source-name-or-id>
+
+# Move a running stream to a different sink
+pactl move-sink-input <stream-id> <sink-id>
+
+# Move a recording stream to a different source
+pactl move-source-output <stream-id> <source-id>
+
+# Get current default sink
+pactl get-default-sink
+
+# Get current default source
+pactl get-default-source
+
+@text
+Card profile management for switching between output modes
+(e.g., headphones vs speakers, analog vs HDMI).
+
+@code bash
+# List card profiles
+pactl list cards | grep -A 20 "Profiles:"
+
+# Set card profile
+pactl set-card-profile <card-id> output:analog-stereo
+pactl set-card-profile <card-id> output:hdmi-stereo
+pactl set-card-profile <card-id> off         # disable card
+
+# Common profiles:
+#   output:analog-stereo
+#   output:analog-surround-51
+#   output:hdmi-stereo
+#   input:analog-stereo
+#   output:analog-stereo+input:analog-stereo
+
+@text
+Monitoring and event subscription.
+
+@code bash
+# Monitor all PulseAudio events
+pactl subscribe
+# Useful for debugging device hotplug, stream creation, volume changes
+
+# One-shot monitoring with callback
+pactl subscribe | while read line; do
+  echo "$(date): $line"
+done
+
+@text
+pacmd provides an interactive shell. With PipeWire's compatibility
+layer, most commands work but some internals differ from real PulseAudio.
+
+@code bash
+# Interactive shell (limited under PipeWire)
+pacmd
+
+# Common pacmd commands that work under pipewire-pulse
+pacmd list-sinks
+pacmd list-sources
+pacmd list-sink-inputs
+pacmd stat                       # server statistics
+pacmd info                       # server info
+pacmd dump                       # dump current configuration
+
+# Note: pacmd set-* commands are deprecated in favor of pactl
+# Some pacmd internals (e.g., module loading) may not work
+# identically under PipeWire -- prefer pactl or wpctl instead
+
+@text
+Useful pactl recipes for scripting and keybindings.
+
+@code bash
+# Toggle mute (good for keyboard shortcut)
+pactl set-sink-mute @DEFAULT_SINK@ toggle
+
+# Volume up/down (good for media keys)
+pactl set-sink-volume @DEFAULT_SINK@ +5%
+pactl set-sink-volume @DEFAULT_SINK@ -5%
+
+# Get current volume as percentage
+pactl get-sink-volume @DEFAULT_SINK@ | grep -oP '\d+%' | head -1
+
+# Check if muted
+pactl get-sink-mute @DEFAULT_SINK@
+
+# Play a sound notification
+paplay /usr/share/sounds/freedesktop/stereo/bell.oga

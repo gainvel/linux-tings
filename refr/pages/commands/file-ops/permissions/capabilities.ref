@@ -1,0 +1,120 @@
+---
+title: Capabilities
+order: 4
+description: Linux capabilities — getcap, setcap
+tags: [permissions, capabilities, getcap, setcap, cap]
+---
+
+Linux capabilities split root's monolithic privileges into distinct units. Instead of granting full root via SUID, grant only the specific privilege a program needs.
+
+@text
+Capability sets:
+
+  Effective (e)   — capabilities currently active for the process
+  Permitted (p)   — capabilities the process may use (can be enabled into effective)
+  Inheritable (i) — capabilities preserved across execve()
+
+  File capability notation: cap_name+eip
+    e = effective (raise on exec)
+    i = inheritable
+    p = permitted
+
+@text
+View capabilities with getcap.
+
+@code bash
+# Show capabilities on a file
+getcap /usr/bin/ping
+
+# Example output:
+# /usr/bin/ping cap_net_raw=ep
+
+# Recursively find all files with capabilities
+sudo getcap -r / 2>/dev/null
+
+# Check specific directories
+getcap -r /usr/bin/ 2>/dev/null
+getcap -r /usr/sbin/ 2>/dev/null
+
+# Show capabilities of a running process
+cat /proc/$(pgrep -x program)/status | grep -i cap
+
+# Decode capability hex values
+capsh --decode=00000000a80425fb
+
+@text
+Set capabilities with setcap.
+
+@code bash
+# Allow a program to bind to privileged ports (< 1024) without root
+sudo setcap 'cap_net_bind_service=+ep' /usr/bin/myserver
+
+# Allow raw network access (e.g., ping without SUID)
+sudo setcap 'cap_net_raw=+ep' /usr/bin/myping
+
+# Allow reading any file (like root read access)
+sudo setcap 'cap_dac_read_search=+ep' /usr/bin/mytool
+
+# Set multiple capabilities
+sudo setcap 'cap_net_bind_service,cap_net_raw=+ep' /usr/bin/myserver
+
+# Remove all capabilities from a file
+sudo setcap -r /usr/bin/myserver
+
+@text
+Commonly used capabilities:
+
+  cap_chown              — change file ownership
+  cap_dac_override       — bypass file read/write/execute permission checks
+  cap_dac_read_search    — bypass file read and directory search checks
+  cap_fowner             — bypass permission checks on file owner operations
+  cap_kill               — send signals to any process
+  cap_net_admin          — network administration (configure interfaces, firewall)
+  cap_net_bind_service   — bind to ports below 1024
+  cap_net_raw            — use raw and packet sockets (ping, tcpdump)
+  cap_setuid             — change UID
+  cap_setgid             — change GID
+  cap_sys_admin          — broad sysadmin (mount, swapon, sethostname, many more)
+  cap_sys_chroot         — use chroot
+  cap_sys_ptrace         — trace/debug any process
+  cap_sys_time           — set system clock
+
+@text
+Practical examples.
+
+@code bash
+# Allow a web server to bind port 80/443 without root
+sudo setcap 'cap_net_bind_service=+ep' /usr/bin/caddy
+
+# Allow tcpdump to capture without root
+sudo setcap 'cap_net_raw,cap_net_admin=+ep' /usr/bin/tcpdump
+
+# Allow a backup tool to read all files
+sudo setcap 'cap_dac_read_search=+ep' /usr/local/bin/backup
+
+# Verify after setting
+getcap /usr/bin/caddy
+
+@text
+Capabilities vs SUID — prefer capabilities when possible.
+
+@code bash
+# Instead of SUID root:
+sudo chmod u+s /usr/bin/myprogram        # gives ALL root powers
+
+# Use capabilities for least privilege:
+sudo setcap 'cap_net_raw=+ep' /usr/bin/myprogram  # only raw sockets
+
+# Check what a program actually needs with strace
+sudo strace -f -e trace=process /usr/bin/program 2>&1 | grep -i cap
+
+# List all capabilities
+capsh --print
+
+@text
+Security notes:
+- Capabilities on scripts are ignored (same as SUID) — only binaries
+- Files with capabilities must not be writable by unprivileged users
+- cap_sys_admin is nearly equivalent to full root — avoid it
+- Capabilities survive copy but not move across filesystems
+- Package updates may reset capabilities — use a post-install hook

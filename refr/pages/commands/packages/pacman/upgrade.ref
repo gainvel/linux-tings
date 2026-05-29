@@ -1,0 +1,91 @@
+---
+title: System Upgrade
+order: 3
+description: -Syu, partial upgrade risks, downgrading
+tags: [pacman, upgrade, update, downgrade, syu]
+---
+
+System upgrades and dealing with version issues.
+
+@code bash
+# ---- full system upgrade ----
+
+pacman -Syu                               # sync databases + upgrade all
+pacman -Syuu                              # allow downgrading packages too
+
+# check what would be upgraded (dry run)
+checkupdates                              # safe, doesn't touch sync db
+# install: pacman -S pacman-contrib
+
+@text
+CRITICAL: Never run `pacman -Sy` without `-u`. Syncing the database
+without upgrading causes a partial upgrade, which can break the system.
+Libraries may be updated in the database but not on disk, causing
+applications to fail.
+
+Unsafe operations:
+- `pacman -Sy package` -- installs against new database, old libraries
+- `pacman -Sy` then later `pacman -S package` -- same problem
+
+Safe operations:
+- `pacman -Syu` -- full upgrade
+- `pacman -Syu package` -- upgrade everything + install package
+
+@code bash
+# ---- downgrading packages ----
+
+# from cache (if old version is still cached)
+pacman -U /var/cache/pacman/pkg/package-oldversion-x86_64.pkg.tar.zst
+
+# list cached versions
+ls /var/cache/pacman/pkg/package-*
+
+# from Arch Linux Archive (ALA)
+# https://archive.archlinux.org/packages/p/package/
+pacman -U https://archive.archlinux.org/packages/p/package/package-oldversion-x86_64.pkg.tar.zst
+
+@code bash
+# ---- hold/ignore packages ----
+
+# skip specific packages during upgrade
+pacman -Syu --ignore package1,package2
+
+# permanent ignore in /etc/pacman.conf
+# IgnorePkg = package1 package2
+# IgnoreGroup = groupname
+
+@code bash
+# ---- handling .pacnew and .pacsave files ----
+
+# find all pacnew/pacsave files
+find /etc -name "*.pacnew" -o -name "*.pacsave" 2>/dev/null
+pacdiff                                   # interactive merge tool (pacman-contrib)
+
+# manually compare and merge
+diff /etc/config.conf /etc/config.conf.pacnew
+vimdiff /etc/config.conf /etc/config.conf.pacnew
+
+@text
+.pacnew files appear when pacman upgrades a package and the config file
+on disk has been modified by the user. The new default config is saved
+as .pacnew. You must manually merge changes.
+
+.pacsave files appear when a package is removed and the config file was
+modified. The modified config is saved as .pacsave.
+
+@code bash
+# ---- troubleshooting upgrades ----
+
+# if keyring is out of date
+pacman -Sy archlinux-keyring artix-keyring && pacman -Su
+
+# if database is locked
+rm /var/lib/pacman/db.lck                 # only if no pacman is running
+
+# if file conflicts during upgrade
+pacman -Syu --overwrite '/path/to/file'
+
+# check for broken packages
+pacman -Qk                                # check all package files
+pacman -Qk package                        # check specific package
+pacman -Qkk package                       # more thorough check (permissions, etc.)

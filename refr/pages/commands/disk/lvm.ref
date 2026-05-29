@@ -1,0 +1,155 @@
+---
+title: LVM
+order: 4
+description: Logical Volume Manager — pvcreate, vgcreate, lvcreate, lvextend
+tags: [disk, lvm, pvcreate, vgcreate, lvcreate, lvextend, pvs, vgs, lvs]
+---
+
+LVM provides flexible disk management with physical volumes (PV), volume groups (VG), and logical volumes (LV). Volumes can be resized, moved, and snapshotted without unmounting.
+
+@text
+LVM hierarchy: Physical Volumes (PV) -> Volume Groups (VG) -> Logical Volumes (LV).
+
+Inspect existing LVM configuration.
+
+@code bash
+# Summary views
+sudo pvs          # physical volumes
+sudo vgs          # volume groups
+sudo lvs          # logical volumes
+
+# Detailed views
+sudo pvdisplay
+sudo vgdisplay
+sudo lvdisplay
+
+# Detailed info for a specific item
+sudo pvdisplay /dev/sda1
+sudo vgdisplay myvg
+sudo lvdisplay /dev/myvg/mylv
+
+# Scan for all LVM devices
+sudo pvscan
+sudo vgscan
+sudo lvscan
+
+@text
+Create LVM from scratch — full workflow.
+
+@code bash
+# 1. Initialize physical volumes on partitions or whole disks
+sudo pvcreate /dev/sda1
+sudo pvcreate /dev/sdb1
+
+# 2. Create a volume group from one or more PVs
+sudo vgcreate myvg /dev/sda1
+
+# Create VG with specific physical extent size
+sudo vgcreate -s 16M myvg /dev/sda1
+
+# 3. Create logical volumes
+# Fixed size
+sudo lvcreate -L 50G -n data myvg
+
+# Use percentage of free space
+sudo lvcreate -l 100%FREE -n data myvg
+
+# Use percentage of total VG size
+sudo lvcreate -l 80%VG -n data myvg
+
+# 4. Create filesystem on the LV
+sudo mkfs.ext4 /dev/myvg/data
+
+# 5. Mount it
+sudo mount /dev/myvg/data /mnt/data
+
+# fstab entry (use /dev/mapper/ path or UUID)
+# /dev/mapper/myvg-data   /mnt/data   ext4   defaults   0  2
+
+@text
+Extend and modify volumes.
+
+@code bash
+# Add a new PV to an existing VG
+sudo pvcreate /dev/sdc1
+sudo vgextend myvg /dev/sdc1
+
+# Extend LV by a specific amount
+sudo lvextend -L +20G /dev/myvg/data
+
+# Extend LV to a specific size
+sudo lvextend -L 100G /dev/myvg/data
+
+# Extend LV to fill all free space in VG
+sudo lvextend -l +100%FREE /dev/myvg/data
+
+# Extend LV and resize filesystem in one step (-r flag)
+sudo lvextend -r -L +20G /dev/myvg/data
+
+# Resize filesystem after extending (if -r not used)
+sudo resize2fs /dev/myvg/data       # ext4
+sudo xfs_growfs /mnt/data            # xfs (by mountpoint)
+
+@text
+Shrink volumes (ext4 only; XFS cannot shrink).
+
+@code bash
+# Shrink requires unmounting first
+sudo umount /mnt/data
+
+# Check filesystem
+sudo e2fsck -f /dev/myvg/data
+
+# Shrink filesystem first
+sudo resize2fs /dev/myvg/data 30G
+
+# Then shrink the LV to match
+sudo lvreduce -L 30G /dev/myvg/data
+
+# Or shrink both in one step
+sudo lvreduce -r -L 30G /dev/myvg/data
+
+# Remount
+sudo mount /dev/myvg/data /mnt/data
+
+@text
+LVM snapshots — point-in-time copies.
+
+@code bash
+# Create a snapshot (allocate space for changes)
+sudo lvcreate -s -L 10G -n data_snap /dev/myvg/data
+
+# Mount snapshot read-only
+sudo mount -o ro /dev/myvg/data_snap /mnt/snapshot
+
+# Remove snapshot when done
+sudo umount /mnt/snapshot
+sudo lvremove /dev/myvg/data_snap
+
+@text
+Remove LVM components (reverse order: LV -> VG -> PV).
+
+@code bash
+# Unmount and remove logical volume
+sudo umount /mnt/data
+sudo lvremove /dev/myvg/data
+
+# Remove volume group
+sudo vgremove myvg
+
+# Remove physical volume label
+sudo pvremove /dev/sda1
+
+@text
+Move data off a physical volume (before removing a disk).
+
+@code bash
+# Move all extents from one PV to others in the same VG
+sudo pvmove /dev/sda1
+
+# Move to a specific PV
+sudo pvmove /dev/sda1 /dev/sdb1
+
+# Then remove the emptied PV from the VG
+sudo vgreduce myvg /dev/sda1
+sudo pvremove /dev/sda1

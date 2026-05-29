@@ -1,0 +1,138 @@
+---
+title: Syslog
+order: 1
+description: syslog-ng, metalog, /var/log/messages, facilities and priorities
+tags: [syslog, syslog-ng, metalog, logging, facilities]
+---
+
+Artix uses syslog-ng or metalog instead of systemd's journald. These write structured log files to /var/log/.
+
+@text
+syslog-ng
+
+The most common syslog daemon on Artix/OpenRC systems.
+
+@code bash
+# Install syslog-ng
+sudo pacman -S syslog-ng
+
+# Enable at boot (OpenRC)
+sudo rc-update add syslog-ng default
+
+# Service management
+sudo rc-service syslog-ng start
+sudo rc-service syslog-ng stop
+sudo rc-service syslog-ng restart
+sudo rc-service syslog-ng status
+
+# Main config file
+# /etc/syslog-ng/syslog-ng.conf
+
+# Test config syntax
+sudo syslog-ng --syntax-only
+
+# Run in foreground for debugging
+sudo syslog-ng -F -d
+
+@text
+syslog-ng Configuration Basics
+
+@code bash
+# /etc/syslog-ng/syslog-ng.conf structure:
+#
+# source s_sys {
+#     system();           # /dev/log, /proc/kmsg
+#     internal();         # syslog-ng's own messages
+# };
+#
+# destination d_messages {
+#     file("/var/log/messages");
+# };
+#
+# destination d_auth {
+#     file("/var/log/auth.log");
+# };
+#
+# destination d_kern {
+#     file("/var/log/kern.log");
+# };
+#
+# filter f_auth { facility(auth, authpriv); };
+# filter f_kern { facility(kern); };
+# filter f_cron { facility(cron); };
+#
+# log { source(s_sys); filter(f_auth); destination(d_auth); };
+# log { source(s_sys); filter(f_kern); destination(d_kern); };
+# log { source(s_sys); destination(d_messages); };
+
+@text
+metalog
+
+A simpler alternative syslog daemon, sometimes used on Artix.
+
+@code bash
+# Install metalog
+sudo pacman -S metalog
+
+# Enable at boot
+sudo rc-update add metalog default
+
+# Service management
+sudo rc-service metalog start
+sudo rc-service metalog status
+
+# Config: /etc/metalog.conf
+# Logs typically go to /var/log/ with subdirectories per facility
+
+@text
+Syslog Facilities and Priorities
+
+@code bash
+# Facilities (message sources):
+# auth/authpriv — authentication, sudo, login
+# cron          — cron daemon
+# daemon        — system daemons
+# kern          — kernel messages
+# mail          — mail system
+# user          — user-level messages (default)
+# local0-local7 — custom application use
+# syslog        — syslog daemon itself
+
+# Priorities (severity, high to low):
+# emerg   (0) — system is unusable
+# alert   (1) — immediate action needed
+# crit    (2) — critical conditions
+# err     (3) — error conditions
+# warning (4) — warning conditions
+# notice  (5) — normal but significant
+# info    (6) — informational
+# debug   (7) — debug messages
+
+# Send a test message via logger
+logger "Test message"
+logger -p auth.info "Auth test"
+logger -p local0.err "Custom facility error"
+logger -t myapp "Tagged message"
+
+@text
+Viewing Logs
+
+@code bash
+# View recent messages
+tail -50 /var/log/messages
+
+# Follow log in real-time
+tail -f /var/log/messages
+
+# Follow multiple logs
+tail -f /var/log/messages /var/log/auth.log
+
+# Search logs
+grep -i "error" /var/log/messages
+grep -i "failed" /var/log/auth.log
+
+# View logs from a date range
+awk '/May 10/,0' /var/log/messages
+
+# View with timestamps parsed
+less /var/log/messages

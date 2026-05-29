@@ -1,0 +1,172 @@
+---
+title: Copying & Moving
+order: 2
+description: Copying, moving, and removing files — cp, mv, rm, mkdir, rmdir, rsync
+tags: [files, cp, mv, rm, mkdir, rmdir, rsync]
+---
+
+Core file manipulation commands for copying, moving, creating, and removing files and directories.
+
+@text
+cp — copy files and directories.
+
+@code bash
+# Copy a file
+cp source.txt dest.txt
+
+# Copy preserving attributes (mode, ownership, timestamps)
+cp -p source.txt dest.txt
+
+# Copy preserving all attributes (including xattrs, ACLs)
+cp -a source.txt dest.txt
+
+# Copy a directory recursively
+cp -r srcdir/ destdir/
+
+# Archive copy (recursive + preserve all attributes)
+cp -a srcdir/ destdir/
+
+# Interactive — prompt before overwriting
+cp -i source.txt dest.txt
+
+# Never overwrite existing files
+cp -n source.txt dest.txt
+
+# Force overwrite (remove destination first if needed)
+cp -f source.txt dest.txt
+
+# Copy multiple files to a directory
+cp file1.txt file2.txt /dest/dir/
+
+# Copy with verbose output
+cp -v source.txt dest.txt
+
+# Update — copy only when source is newer
+cp -u source.txt dest.txt
+
+# Dereference symlinks (copy the target, not the link)
+cp -L linkfile dest.txt
+
+# Create hard links instead of copying
+cp -l source.txt dest.txt
+
+# Create reflink copy (instant copy-on-write, btrfs/xfs)
+cp --reflink=auto source.txt dest.txt
+
+@text
+mv — move or rename files.
+
+@code bash
+# Rename a file
+mv oldname.txt newname.txt
+
+# Move file to directory
+mv file.txt /dest/dir/
+
+# Move multiple files to directory
+mv file1.txt file2.txt /dest/dir/
+
+# Interactive — prompt before overwriting
+mv -i source.txt dest.txt
+
+# Never overwrite
+mv -n source.txt dest.txt
+
+# Verbose output
+mv -v file.txt /dest/dir/
+
+# Move directory
+mv srcdir/ /dest/dir/
+
+# Rename directory
+mv olddir/ newdir/
+
+@text
+rm — remove files and directories.
+
+@code bash
+# Remove a file
+rm file.txt
+
+# Remove with confirmation prompt
+rm -i file.txt
+
+# Force remove (no prompts, ignore nonexistent)
+rm -f file.txt
+
+# Remove directory and contents recursively
+rm -r directory/
+
+# Force recursive remove (common for cleanup)
+rm -rf directory/
+
+# Verbose output
+rm -rv directory/
+
+# Remove empty directory
+rmdir emptydir/
+
+# Remove nested empty directories
+rmdir -p a/b/c/   # removes c, then b, then a if each is empty
+
+@text
+mkdir — create directories.
+
+@code bash
+# Create a directory
+mkdir newdir
+
+# Create nested directories (parents as needed)
+mkdir -p path/to/nested/dir
+
+# Create with specific permissions
+mkdir -m 700 private_dir
+
+# Create multiple directories
+mkdir dir1 dir2 dir3
+
+# Verbose output
+mkdir -v newdir
+
+@text
+rsync — efficient local file copying (also used for remote, see networking).
+
+@code bash
+# Copy directory (trailing slash on source = copy contents)
+rsync -av srcdir/ destdir/
+
+# Without trailing slash = copy the directory itself into dest
+rsync -av srcdir destdir/
+
+# Copy with progress
+rsync -av --progress srcdir/ destdir/
+
+# Dry run — show what would be copied
+rsync -av --dry-run srcdir/ destdir/
+
+# Delete files in dest that don't exist in source (mirror)
+rsync -av --delete srcdir/ destdir/
+
+# Exclude patterns
+rsync -av --exclude='*.log' --exclude='.git/' srcdir/ destdir/
+
+# Include/exclude patterns from file
+rsync -av --exclude-from='exclude.txt' srcdir/ destdir/
+
+# Copy only newer files
+rsync -av --update srcdir/ destdir/
+
+# Preserve hard links
+rsync -avH srcdir/ destdir/
+
+# Compress during transfer
+rsync -avz srcdir/ destdir/
+
+# Show itemized changes
+rsync -avi srcdir/ destdir/
+
+# Limit bandwidth (in KBps)
+rsync -av --bwlimit=10000 srcdir/ destdir/
+
+# Resume partial transfers
+rsync -av --partial srcdir/ destdir/

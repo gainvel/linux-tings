@@ -1,0 +1,215 @@
+---
+title: Monitoring
+order: 2
+description: top, htop, btop, free, vmstat, iostat, sar
+tags: [top, htop, btop, free, vmstat, iostat, sar, monitoring]
+---
+
+Real-time and periodic system monitoring tools for CPU, memory, disk I/O, and overall system health.
+
+@text
+top — Basic Process Monitor
+
+@code bash
+# Launch top
+top
+
+# Key bindings inside top:
+# q          quit
+# 1          toggle per-CPU view
+# M          sort by memory
+# P          sort by CPU (default)
+# T          sort by time
+# k          kill a process (enter PID)
+# r          renice a process
+# f          select display fields
+# c          toggle full command line
+# H          toggle threads
+# u          filter by user
+# V          forest/tree view
+
+# Batch mode (non-interactive, for scripts)
+top -b -n 1                    # one snapshot
+top -b -n 5 -d 2              # 5 snapshots, 2s apart
+
+# Show specific user
+top -u username
+
+# Show specific PIDs
+top -p 1234,5678
+
+@text
+htop — Interactive Process Viewer
+
+@code bash
+# Launch htop
+htop
+
+# Key bindings:
+# F1/h       help
+# F2         setup (customize display)
+# F3//       search process
+# F4/\       filter processes
+# F5/t       tree view
+# F6/<>      sort by column
+# F7/F8      decrease/increase nice value
+# F9/k       kill process (signal menu)
+# F10/q      quit
+# Space      tag process
+# U          untag all
+# u          filter by user
+# p          toggle program path
+# H          toggle user threads
+# K          toggle kernel threads
+
+# Launch with tree view
+htop -t
+
+# Launch filtering by user
+htop -u username
+
+# Launch sorted by memory
+htop --sort-key=PERCENT_MEM
+
+@text
+btop — Modern Resource Monitor
+
+@code bash
+# Launch btop
+btop
+
+# Features: CPU, memory, disk, network graphs
+# Customizable themes and layouts
+# Mouse support
+
+# Key bindings:
+# q       quit
+# Esc     back/cancel
+# m       cycle memory display
+# n       cycle network display
+# p/Enter process menu
+# f       filter processes
+# t       tree view
+# r       reverse sort order
+# e       toggle per-core CPU
+
+@text
+free — Memory Usage
+
+@code bash
+# Show memory in human-readable format
+free -h
+
+# Show in megabytes
+free -m
+
+# Show in gigabytes
+free -g
+
+# Continuous updates (every 2 seconds)
+free -h -s 2
+
+# Count of updates
+free -h -s 2 -c 5
+
+# Show totals line
+free -ht
+
+# Key columns:
+# total    — installed RAM
+# used     — currently used
+# free     — completely unused
+# shared   — tmpfs/shmem
+# buff/cache — buffer + page cache (reclaimable)
+# available — estimated available for new apps (free + reclaimable cache)
+
+@text
+vmstat — Virtual Memory Statistics
+
+@code bash
+# One-shot summary
+vmstat
+
+# Update every 2 seconds
+vmstat 2
+
+# 10 updates, 2 seconds apart
+vmstat 2 10
+
+# Show in megabytes
+vmstat -S M
+
+# Show disk statistics
+vmstat -d
+
+# Show active/inactive memory
+vmstat -a
+
+# Key columns:
+# procs: r=running, b=blocked
+# memory: swpd, free, buff, cache
+# swap: si=swap in, so=swap out (should be 0 normally)
+# io: bi=blocks in, bo=blocks out
+# system: in=interrupts, cs=context switches
+# cpu: us=user, sy=system, id=idle, wa=I/O wait, st=stolen
+
+@text
+iostat — I/O Statistics
+
+@code bash
+# Install (part of sysstat)
+sudo pacman -S sysstat
+
+# Basic I/O statistics
+iostat
+
+# Update every 2 seconds
+iostat 2
+
+# Extended statistics for all devices
+iostat -x 2
+
+# Show specific device
+iostat -x /dev/sda 2
+
+# Human-readable sizes
+iostat -h 2
+
+# Key columns (extended):
+# r/s, w/s     — reads/writes per second
+# rkB/s, wkB/s — read/write throughput
+# await        — average I/O wait time (ms)
+# %util        — device utilization (100% = saturated)
+
+@text
+sar — System Activity Reporter
+
+@code bash
+# Install (part of sysstat)
+sudo pacman -S sysstat
+
+# Enable data collection (OpenRC)
+sudo rc-update add sysstat default
+sudo rc-service sysstat start
+
+# CPU usage (every 2 seconds, 5 times)
+sar -u 2 5
+
+# Memory usage
+sar -r 2 5
+
+# Disk I/O
+sar -d 2 5
+
+# Network I/O
+sar -n DEV 2 5
+
+# All statistics
+sar -A 2 5
+
+# View historical data (from /var/log/sa/)
+sar -u -f /var/log/sa/sa10     # CPU from the 10th
+sar -r -f /var/log/sa/sa10     # memory from the 10th
+
+# Specify time range
+sar -u -s 14:00:00 -e 15:00:00

@@ -1,0 +1,148 @@
+---
+title: Wireless
+order: 2
+description: iw, iwctl (iwd), wpa_supplicant, rfkill
+tags: [wifi, wireless, iw, iwd, iwctl, wpa_supplicant, rfkill]
+---
+
+Wireless networking tools. iwd is the modern replacement for wpa_supplicant
+and is recommended for new setups. Both can work standalone or under a
+network manager.
+
+@code bash
+# ---- iw: low-level wireless configuration ----
+
+iw dev                                    # list wireless interfaces
+iw dev wlan0 info                         # interface details
+iw dev wlan0 link                         # current connection info
+iw dev wlan0 scan                         # scan for networks
+iw dev wlan0 scan | grep -E "SSID|signal|freq"   # filtered scan
+
+iw dev wlan0 connect "MyNetwork"          # connect to open network
+iw dev wlan0 disconnect                   # disconnect
+
+# interface management
+iw phy phy0 info                          # hardware capabilities
+iw dev wlan0 set power_save off           # disable power saving
+iw dev wlan0 set txpower fixed 1500       # set tx power (mBm)
+
+# monitor mode
+iw dev wlan0 set type monitor             # enable (interface must be down)
+iw dev wlan0 set type managed             # back to managed mode
+
+@code bash
+# ---- iwctl: iwd interactive client ----
+
+# iwd service (OpenRC)
+rc-service iwd start
+rc-update add iwd default
+
+# interactive mode
+iwctl                                     # enter interactive shell
+
+# command-line mode
+iwctl station wlan0 scan
+iwctl station wlan0 get-networks          # list available networks
+iwctl station wlan0 connect "MyNetwork"   # connect (prompts for passphrase)
+iwctl station wlan0 connect-hidden "SSID" # connect to hidden network
+iwctl station wlan0 disconnect
+iwctl station wlan0 show                  # connection status
+
+iwctl known-networks list                 # saved networks
+iwctl known-networks "MyNetwork" forget   # remove saved network
+iwctl known-networks "MyNetwork" set-property AutoConnect yes
+
+iwctl device list                         # list devices
+iwctl adapter list                        # list adapters
+iwctl adapter phy0 show                   # adapter info
+
+@text
+iwd stores network profiles in /var/lib/iwd/ as .open, .psk, or .8021x
+files. The passphrase is stored as a pre-shared key (hashed). You can
+manually create profiles there.
+
+@code bash
+# Example: /var/lib/iwd/MyNetwork.psk
+[Security]
+PreSharedKey=hex_encoded_psk_here
+Passphrase=plaintext_passphrase_here
+
+[Settings]
+AutoConnect=true
+
+@code bash
+# ---- wpa_supplicant ----
+
+# generate config
+wpa_passphrase "MyNetwork" "passphrase" > /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+
+# connect manually
+wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+dhcpcd wlan0                              # get IP after association
+
+# OpenRC service
+rc-service wpa_supplicant start
+rc-update add wpa_supplicant default
+
+# wpa_cli interactive
+wpa_cli -i wlan0
+> scan
+> scan_results
+> add_network
+> set_network 0 ssid "MyNetwork"
+> set_network 0 psk "passphrase"
+> enable_network 0
+> save_config
+> quit
+
+@text
+wpa_supplicant config file location: the service looks for
+/etc/wpa_supplicant/wpa_supplicant.conf or a per-interface file
+wpa_supplicant-<interface>.conf.
+
+@code bash
+# Example: /etc/wpa_supplicant/wpa_supplicant.conf
+ctrl_interface=/run/wpa_supplicant
+update_config=1
+
+network={
+    ssid="MyNetwork"
+    psk="passphrase"
+    priority=5
+}
+
+network={
+    ssid="OpenNetwork"
+    key_mgmt=NONE
+}
+
+@code bash
+# ---- rfkill: manage wireless kill switches ----
+
+rfkill list                               # show all wireless devices
+rfkill list wifi                          # wifi only
+rfkill list bluetooth                     # bluetooth only
+
+rfkill block wifi                         # software-block wifi
+rfkill unblock wifi                       # unblock wifi
+rfkill unblock all                        # unblock everything
+
+@text
+If rfkill shows "Hard blocked: yes", the hardware switch or BIOS has
+disabled the radio. No software command can override a hard block. Check
+the physical switch or BIOS/UEFI settings.
+
+Common troubleshooting:
+
+@code bash
+# check if driver is loaded
+lspci -k | grep -A3 -i wireless
+lsmod | grep -i iwl                       # Intel wireless
+
+# check for firmware issues
+dmesg | grep -i firmware
+dmesg | grep -i iwl
+
+# restart networking
+ip link set wlan0 down
+ip link set wlan0 up

@@ -1,0 +1,134 @@
+---
+title: PipeWire
+order: 1
+description: PipeWire audio server, WirePlumber, and pw-cli tools
+tags: [audio, pipewire, pw-cli, pw-top, pw-dump, pw-record, wireplumber, wpctl]
+---
+
+PipeWire is the modern audio/video server replacing PulseAudio and JACK.
+WirePlumber is its session manager handling device routing and policy.
+
+@code bash
+# Install PipeWire stack
+sudo pacman -S pipewire pipewire-pulse pipewire-alsa pipewire-jack wireplumber
+
+# Start PipeWire (user service via pipewire-launcher or XDG autostart)
+# On Artix without systemd, PipeWire typically starts via:
+# - XDG autostart desktop entries
+# - KDE Plasma session startup
+# - Manual: pipewire & pipewire-pulse & wireplumber &
+
+# Check if PipeWire is running
+pw-cli info 0                    # query the core object (ID 0)
+pactl info | grep "Server Name"  # should show PipeWire
+
+@text
+wpctl is the primary tool for managing audio devices and volumes
+through WirePlumber.
+
+@code bash
+# List all audio devices and streams
+wpctl status
+
+# Get/set volume (ID from wpctl status, or use @DEFAULT_AUDIO_SINK@)
+wpctl get-volume @DEFAULT_AUDIO_SINK@
+wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.5        # set to 50%
+wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+        # increase by 5%
+wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-        # decrease by 5%
+wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 10%+  # cap at 100%
+
+# Mute/unmute
+wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+wpctl set-mute @DEFAULT_AUDIO_SINK@ 1            # mute
+wpctl set-mute @DEFAULT_AUDIO_SINK@ 0            # unmute
+
+# Set default sink/source
+wpctl set-default <id>           # ID from wpctl status
+
+# Inspect a node
+wpctl inspect <id>
+
+@text
+pw-cli provides low-level control over PipeWire objects.
+
+@code bash
+# List all objects
+pw-cli list-objects
+
+# Detailed info about an object
+pw-cli info <id>
+pw-cli info all                  # everything
+
+# Enumerate specific types
+pw-cli enum-params <id> Props    # object properties
+pw-cli enum-params <id> Format   # supported formats
+
+# Create a link between ports
+pw-link <output-port> <input-port>
+pw-link -o                       # list output ports
+pw-link -i                       # list input ports
+pw-link -l                       # list existing links
+pw-link -d <output-port> <input-port>  # disconnect
+
+@text
+Monitoring and debugging PipeWire.
+
+@code bash
+# Real-time performance monitor
+pw-top                           # shows nodes, latency, xruns, CPU usage
+
+# Dump full graph as JSON
+pw-dump                          # all objects
+pw-dump <id>                     # specific object
+pw-dump | jq '.[] | select(.type == "PipeWire:Interface:Node")'
+
+# Monitor events
+pw-mon                           # watch PipeWire events in real time
+pw-cli dump                      # snapshot of current state
+
+# Check for audio issues
+pw-top                           # watch xrun column for glitches
+
+@text
+Recording and playback with PipeWire tools.
+
+@code bash
+# Record audio
+pw-record output.wav                     # record default source
+pw-record --target <id> output.wav       # record specific source
+pw-record --format f32 --rate 48000 --channels 2 output.wav
+
+# Play audio
+pw-play input.wav
+pw-play --target <id> input.wav          # play to specific sink
+
+# MIDI
+pw-midirecord output.mid
+pw-midiplay input.mid
+
+# Generate test signal
+pw-cat --playback --format f32 --rate 48000 --channels 1 /dev/urandom
+
+@text
+PipeWire configuration on Artix Linux.
+
+@code bash
+# Config locations (copy from /usr/share/pipewire/ to override)
+# ~/.config/pipewire/pipewire.conf          # main config
+# ~/.config/pipewire/pipewire-pulse.conf    # PulseAudio compat
+# ~/.config/pipewire/client.conf            # client defaults
+
+# WirePlumber config
+# ~/.config/wireplumber/                    # WirePlumber overrides
+
+# Set default sample rate
+# In ~/.config/pipewire/pipewire.conf.d/99-custom.conf:
+# context.properties = {
+#     default.clock.rate = 48000
+#     default.clock.allowed-rates = [ 44100 48000 96000 ]
+# }
+
+# Restart PipeWire after config changes
+# Kill and let autostart restart it, or:
+# killall pipewire pipewire-pulse wireplumber
+# pipewire & pipewire-pulse & wireplumber &

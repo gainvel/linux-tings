@@ -1,0 +1,129 @@
+---
+title: Partitioning
+order: 1
+description: Disk partitioning and device identification
+tags: [disk, partition, fdisk, gdisk, parted, lsblk, blkid]
+---
+
+Tools for creating, modifying, and inspecting disk partition tables. Use gdisk for GPT disks (UEFI systems), fdisk for MBR or GPT, and parted for scripted operations.
+
+@text
+List block devices and identify disks before partitioning.
+
+@code bash
+# List all block devices with size, type, and mountpoints
+lsblk
+
+# Detailed output with filesystem type and UUIDs
+lsblk -f
+
+# Show only disks (no partitions)
+lsblk -d
+
+# Show specific columns
+lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,UUID
+
+# Identify block device attributes (UUID, TYPE, LABEL)
+blkid
+
+# Query a specific device
+blkid /dev/sda1
+
+# Show only UUID
+blkid -s UUID -o value /dev/sda1
+
+@text
+fdisk — interactive MBR/GPT partition editor.
+
+@code bash
+# List partition tables on all disks
+sudo fdisk -l
+
+# List partitions on a specific disk
+sudo fdisk -l /dev/sda
+
+# Open interactive partition editor
+sudo fdisk /dev/sda
+# Key commands inside fdisk:
+#   p    print partition table
+#   n    new partition
+#   d    delete partition
+#   t    change partition type
+#   w    write changes and exit
+#   q    quit without saving
+
+# Non-interactive: dump partition table as sfdisk script
+sudo sfdisk -d /dev/sda > partitions.bak
+
+# Restore partition table from backup
+sudo sfdisk /dev/sda < partitions.bak
+
+@text
+gdisk — GPT-aware partition editor (preferred for UEFI systems).
+
+@code bash
+# List GPT partitions
+sudo gdisk -l /dev/sda
+
+# Open interactive GPT editor
+sudo gdisk /dev/sda
+# Key commands inside gdisk:
+#   p    print partition table
+#   n    new partition
+#   d    delete partition
+#   t    change type code (EF00=EFI, 8300=Linux, 8200=swap)
+#   i    info on a partition
+#   w    write and exit
+#   q    quit without saving
+
+# Convert MBR to GPT (non-destructive but back up first)
+sudo sgdisk -g /dev/sda
+
+# Backup GPT table
+sudo sgdisk -b gpt-backup.bin /dev/sda
+
+# Restore GPT table
+sudo sgdisk -l gpt-backup.bin /dev/sda
+
+@text
+parted — scriptable partition editor supporting MBR and GPT.
+
+@code bash
+# List all partitions
+sudo parted -l
+
+# Interactive mode
+sudo parted /dev/sda
+
+# Create a GPT label
+sudo parted /dev/sda mklabel gpt
+
+# Create a 512 MiB EFI partition starting at 1 MiB
+sudo parted /dev/sda mkpart primary fat32 1MiB 513MiB
+sudo parted /dev/sda set 1 esp on
+
+# Create a Linux partition using remaining space
+sudo parted /dev/sda mkpart primary ext4 513MiB 100%
+
+# Print partition table
+sudo parted /dev/sda print
+
+# Resize a partition (parted only moves the end boundary; resize filesystem separately)
+sudo parted /dev/sda resizepart 2 100%
+
+# Non-interactive scripted partitioning
+sudo parted -s /dev/sda \
+  mklabel gpt \
+  mkpart primary fat32 1MiB 513MiB \
+  set 1 esp on \
+  mkpart primary ext4 513MiB 100%
+
+@text
+Inform the kernel of partition changes without rebooting.
+
+@code bash
+# Re-read partition table (older method)
+sudo partprobe /dev/sda
+
+# Or use blockdev
+sudo blockdev --rereadpt /dev/sda

@@ -1,0 +1,8 @@
+---
+title: System
+order: 8
+description: Core system management
+tags: [system, boot, kernel, services, processes, logs]
+---
+
+Core system management — boot process, kernel, init system (OpenRC), logging, and process control.

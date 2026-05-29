@@ -1,0 +1,99 @@
+---
+title: Query Packages
+order: 4
+description: -Q, -Qi, -Ql, -Qo, -Qs, -Qdt, -Qe
+tags: [pacman, query, search, info, list, orphan]
+---
+
+Querying the local package database for installed packages, their files,
+and dependency relationships.
+
+@code bash
+# ---- list installed packages ----
+
+pacman -Q                                 # all installed packages
+pacman -Qe                                # explicitly installed
+pacman -Qd                                # installed as dependencies
+pacman -Qn                                # from official repos only
+pacman -Qm                                # foreign (AUR, manual install)
+pacman -Qq                                # names only (no version)
+pacman -Qeq                               # explicit names only (for backup lists)
+
+# count
+pacman -Q | wc -l                         # total installed
+pacman -Qe | wc -l                        # explicitly installed count
+
+@code bash
+# ---- package info ----
+
+pacman -Qi package                        # detailed info (installed)
+pacman -Qi package | grep -E "Name|Version|Size|Depends"   # filtered info
+pacman -Qii package                       # include backup files list
+
+# key fields in -Qi output:
+#   Name, Version, Description
+#   Install Date, Install Reason (explicit vs dependency)
+#   Depends On, Required By, Optional Deps
+#   Installed Size
+
+@code bash
+# ---- list package files ----
+
+pacman -Ql package                        # list all files in package
+pacman -Ql package | grep bin/            # find executables
+pacman -Qlq package                       # files only (no package name prefix)
+
+@code bash
+# ---- find which package owns a file ----
+
+pacman -Qo /usr/bin/vim                   # which package owns this file
+pacman -Qo $(which curl)                  # find package for a command
+
+@code bash
+# ---- search installed packages ----
+
+pacman -Qs search-term                    # search names and descriptions
+pacman -Qs '^vim'                         # regex search
+
+@code bash
+# ---- dependency and orphan queries ----
+
+pacman -Qdt                               # orphans (deps, nothing needs them)
+pacman -Qdtq                              # orphan names only
+pacman -Qdtt                              # orphans + optional deps
+pacman -Qe | grep -v "$(pacman -Qqg base-devel)"   # explicit, not in base-devel
+
+# check what depends on a package
+pacman -Qi package | grep "Required By"
+
+# dependency tree (from pacman-contrib)
+pactree package                           # forward dependency tree
+pactree -r package                        # reverse (what depends on this)
+pactree -d 1 package                      # depth limit
+
+@code bash
+# ---- verify installed packages ----
+
+pacman -Qk                                # check all: missing files
+pacman -Qk package                        # check specific package
+pacman -Qkk package                       # thorough check (permissions, sizes)
+
+@code bash
+# ---- useful one-liners ----
+
+# list recently installed packages
+expac --timefmt='%Y-%m-%d %T' '%l\t%n' | sort | tail -20
+
+# list packages by size
+expac -SsH M '%m\t%n' | sort -rh | head -20
+
+# list explicitly installed packages not in base or base-devel
+comm -23 <(pacman -Qqe | sort) <(pacman -Qqg base-devel base 2>/dev/null | sort)
+
+# export package list (for system replication)
+pacman -Qqe > pkglist.txt
+# reinstall from list on new system:
+pacman -S --needed - < pkglist.txt
+
+# list optional deps that are not installed
+pacman -Qi package | grep -A100 "Optional Deps" | grep "\[not installed\]"

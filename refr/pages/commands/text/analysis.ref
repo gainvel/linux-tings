@@ -1,0 +1,237 @@
+---
+title: Analysis
+order: 3
+description: awk, sort, uniq, wc, diff, comm
+tags: [awk, sort, uniq, wc, diff, comm, analysis]
+---
+
+Text analysis tools for structured processing, sorting, deduplication, counting, and comparison.
+
+@text
+awk — Pattern Scanning and Processing
+
+@code bash
+# Print specific fields (whitespace-delimited)
+awk '{print $1}' file.txt                # first field
+awk '{print $1, $3}' file.txt            # first and third
+awk '{print $NF}' file.txt               # last field
+
+# Custom field separator
+awk -F: '{print $1, $3}' /etc/passwd     # username and UID
+awk -F, '{print $2}' data.csv            # second CSV column
+
+# Filter lines by condition
+awk '$3 > 100' data.txt                  # third field > 100
+awk '$1 == "error"' logfile.txt          # first field is "error"
+awk '/pattern/' file.txt                 # lines matching regex
+awk '!/pattern/' file.txt               # lines NOT matching
+
+# Built-in variables
+awk '{print NR, $0}' file.txt            # line number + content
+awk 'END {print NR}' file.txt            # total line count
+awk '{print NF}' file.txt               # field count per line
+
+# Calculations
+awk '{sum += $1} END {print sum}' numbers.txt
+awk '{sum += $1; count++} END {print sum/count}' numbers.txt  # average
+
+# Formatting output
+awk -F: '{printf "%-20s %s\n", $1, $5}' /etc/passwd
+
+# BEGIN and END blocks
+awk 'BEGIN {print "Name\tUID"} {print $1"\t"$3} END {print "---done---"}' FS=: /etc/passwd
+
+# Multiple conditions
+awk '$3 > 1000 && $1 != "nobody"' FS=: /etc/passwd
+
+# Field reassignment
+awk -F: -OFS=: '{$2="x"; print}' /etc/passwd
+
+# String operations
+awk '{print length($0)}' file.txt        # line length
+awk '{print toupper($0)}' file.txt       # uppercase
+awk '{print tolower($0)}' file.txt       # lowercase
+awk '{gsub(/old/, "new"); print}' file.txt  # substitute
+
+# Associative arrays (frequency count)
+awk '{count[$1]++} END {for (k in count) print k, count[k]}' access.log
+
+# Print unique lines (like uniq but works on unsorted data)
+awk '!seen[$0]++' file.txt
+
+# Multi-file processing
+awk 'FNR==1 {print "--- " FILENAME " ---"} {print}' file1.txt file2.txt
+
+@text
+sort — Sort Lines
+
+@code bash
+# Sort alphabetically
+sort file.txt
+
+# Reverse sort
+sort -r file.txt
+
+# Numeric sort
+sort -n numbers.txt
+
+# Sort by specific field (field 2, whitespace-delimited)
+sort -k2 file.txt
+
+# Sort by specific field with custom delimiter
+sort -t: -k3 -n /etc/passwd        # sort by UID
+
+# Sort by multiple keys
+sort -k1,1 -k2,2n file.txt         # alphabetical by col1, then numeric by col2
+
+# Human-readable numeric sort (1K, 2M, 3G)
+sort -h sizes.txt
+du -h /var/log/* | sort -h
+
+# Remove duplicates while sorting
+sort -u file.txt
+
+# Stable sort (preserve order of equal elements)
+sort -s -k1,1 file.txt
+
+# Check if file is sorted (exit 0 if sorted)
+sort -c file.txt
+
+# Sort in place (save back to file — GNU sort)
+sort -o file.txt file.txt
+
+# Case-insensitive sort
+sort -f file.txt
+
+# Random shuffle
+sort -R file.txt
+shuf file.txt
+
+# Sort version numbers
+sort -V versions.txt              # 1.2 < 1.10 < 2.0
+
+@text
+uniq — Deduplicate Adjacent Lines
+
+Input must be sorted first (or use awk '!seen[$0]++' for unsorted data).
+
+@code bash
+# Remove adjacent duplicate lines
+sort file.txt | uniq
+
+# Count occurrences
+sort file.txt | uniq -c
+
+# Show only duplicated lines
+sort file.txt | uniq -d
+
+# Show only unique lines (appearing exactly once)
+sort file.txt | uniq -u
+
+# Ignore case
+sort file.txt | uniq -i
+
+# Skip first N fields
+sort file.txt | uniq -f 1
+
+# Skip first N characters
+sort file.txt | uniq -s 5
+
+# Common pattern: frequency count (sorted)
+sort file.txt | uniq -c | sort -rn | head -20
+
+@text
+wc — Word/Line/Character Count
+
+@code bash
+# Count lines, words, and bytes
+wc file.txt
+
+# Count lines only
+wc -l file.txt
+
+# Count words only
+wc -w file.txt
+
+# Count characters
+wc -m file.txt
+
+# Count bytes
+wc -c file.txt
+
+# Count lines from stdin
+cat file.txt | wc -l
+grep "error" log.txt | wc -l
+
+# Count files in directory
+ls -1 | wc -l
+find . -type f | wc -l
+
+# Longest line length
+wc -L file.txt
+
+# Multiple files (shows per-file and total)
+wc -l *.go
+
+@text
+diff — Compare Files
+
+@code bash
+# Compare two files
+diff file1.txt file2.txt
+
+# Unified diff format (most readable)
+diff -u file1.txt file2.txt
+
+# Context format (3 lines of context)
+diff -c file1.txt file2.txt
+
+# Side-by-side comparison
+diff -y file1.txt file2.txt
+diff -y --width=120 file1.txt file2.txt
+
+# Show only whether files differ
+diff -q file1.txt file2.txt
+
+# Ignore whitespace differences
+diff -w file1.txt file2.txt       # all whitespace
+diff -b file1.txt file2.txt       # trailing whitespace and multiple spaces
+diff -B file1.txt file2.txt       # blank lines
+
+# Ignore case
+diff -i file1.txt file2.txt
+
+# Recursive directory comparison
+diff -r dir1/ dir2/
+diff -rq dir1/ dir2/              # summary only
+
+# Color output
+diff --color=always file1.txt file2.txt
+
+# Generate a patch
+diff -u original.txt modified.txt > changes.patch
+
+# Apply a patch
+patch < changes.patch
+patch -p1 < changes.patch        # strip leading path component
+
+@text
+comm — Compare Sorted Files
+
+@code bash
+# Show three columns: only-in-1, only-in-2, in-both
+comm <(sort file1.txt) <(sort file2.txt)
+
+# Show only lines unique to file1
+comm -23 <(sort file1.txt) <(sort file2.txt)
+
+# Show only lines unique to file2
+comm -13 <(sort file1.txt) <(sort file2.txt)
+
+# Show only lines common to both
+comm -12 <(sort file1.txt) <(sort file2.txt)
+
+# Column suppression flags:
+# -1  suppress column 1 (unique to file1)
+# -2  suppress column 2 (unique to file2)
+# -3  suppress column 3 (common lines)

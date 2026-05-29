@@ -1,0 +1,191 @@
+---
+title: PKGBUILD & makepkg
+order: 3
+description: makepkg, PKGBUILD anatomy, srcinfo
+tags: [makepkg, pkgbuild, aur, build, srcinfo]
+---
+
+PKGBUILDs are bash scripts that define how to build a package. makepkg
+reads the PKGBUILD and produces an installable .pkg.tar.zst file.
+Understanding PKGBUILDs is essential for AUR use and custom packaging.
+
+@code bash
+# ---- makepkg: build packages ----
+
+# basic build
+makepkg                                   # build in current directory
+makepkg -s                                # install missing dependencies first
+makepkg -si                               # build, install deps, install package
+makepkg -sr                               # build, install deps, remove make deps
+makepkg -f                                # force rebuild (overwrite existing pkg)
+
+# useful options
+makepkg -C                                # clean build directory first
+makepkg -c                                # clean up after build
+makepkg --nocheck                         # skip check() function (test suite)
+makepkg --skippgpcheck                    # skip PGP signature verification
+makepkg --noconfirm                       # skip confirmations
+makepkg -e                                # skip extract + prepare, use existing src
+makepkg -o                                # download and extract only (no build)
+makepkg -d                                # skip dependency checks
+
+# source-only (for uploading to AUR)
+makepkg --source                          # create source-only tarball
+
+@text
+PKGBUILD is a bash script. Here is the anatomy of a typical PKGBUILD:
+
+@code bash
+# ---- PKGBUILD anatomy ----
+
+# Maintainer: Your Name <email@example.com>
+pkgname=mypackage                         # package name
+pkgver=1.0.0                              # version
+pkgrel=1                                  # release number (reset to 1 on version bump)
+pkgdesc="Short description"               # description
+arch=('x86_64')                           # architectures: x86_64, aarch64, any
+url="https://github.com/user/project"     # upstream URL
+license=('MIT')                           # license: GPL, MIT, Apache, BSD, etc.
+
+depends=('openssl' 'zlib')               # runtime dependencies
+makedepends=('cmake' 'git')              # build-time only dependencies
+optdepends=('python: scripting support')  # optional runtime dependencies
+checkdepends=('check')                    # test-time dependencies
+
+provides=('otherpkg')                     # virtual packages this provides
+conflicts=('otherpkg')                    # packages this conflicts with
+replaces=('oldpkg')                       # packages this replaces
+
+source=("https://example.com/${pkgname}-${pkgver}.tar.gz"
+        "fix-build.patch")
+sha256sums=('abc123...'
+            'def456...')
+
+# optional: PGP verification
+validpgpkeys=('FINGERPRINT')
+
+prepare() {
+    cd "${pkgname}-${pkgver}"
+    patch -Np1 -i "${srcdir}/fix-build.patch"
+}
+
+build() {
+    cd "${pkgname}-${pkgver}"
+    ./configure --prefix=/usr
+    make
+}
+
+check() {
+    cd "${pkgname}-${pkgver}"
+    make test
+}
+
+package() {
+    cd "${pkgname}-${pkgver}"
+    make DESTDIR="${pkgdir}" install
+    install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
+@text
+Function execution order: pkgver() -> prepare() -> build() -> check() -> package()
+
+- `prepare()`: apply patches, run autoreconf, etc.
+- `build()`: compile the software
+- `check()`: run tests (skipped with --nocheck)
+- `package()`: install files into $pkgdir (the fake root)
+
+@code bash
+# ---- common PKGBUILD patterns ----
+
+# git package (-git suffix)
+pkgname=mypackage-git
+pkgver=r150.abc1234                       # set by pkgver()
+source=("git+https://github.com/user/project.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd project
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+# python package
+build() {
+    cd "${pkgname}-${pkgver}"
+    python setup.py build
+}
+package() {
+    cd "${pkgname}-${pkgver}"
+    python setup.py install --root="${pkgdir}" --optimize=1
+}
+
+# cmake project
+build() {
+    cd "${pkgname}-${pkgver}"
+    cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+    cmake --build build
+}
+package() {
+    cd "${pkgname}-${pkgver}"
+    DESTDIR="${pkgdir}" cmake --install build
+}
+
+# go project
+build() {
+    cd "${pkgname}-${pkgver}"
+    export CGO_CPPFLAGS="${CPPFLAGS}"
+    export CGO_CFLAGS="${CFLAGS}"
+    export CGO_CXXFLAGS="${CXXFLAGS}"
+    export CGO_LDFLAGS="${LDFLAGS}"
+    export GOFLAGS="-buildmode=pie -trimpath -ldflags=-linkmode=external -mod=readonly -modcacherw"
+    go build -o "${pkgname}" .
+}
+package() {
+    install -Dm755 "${srcdir}/${pkgname}-${pkgver}/${pkgname}" "${pkgdir}/usr/bin/${pkgname}"
+}
+
+@code bash
+# ---- .SRCINFO ----
+
+# .SRCINFO is a parsed representation of PKGBUILD metadata
+# required for AUR submissions
+
+# generate .SRCINFO
+makepkg --printsrcinfo > .SRCINFO
+
+# always regenerate after changing PKGBUILD
+
+@code bash
+# ---- integrity sums ----
+
+# generate checksums for source files
+makepkg -g                                # print sums for current PKGBUILD
+makepkg -g >> PKGBUILD                    # append to PKGBUILD
+updpkgsums                                # auto-update sums in PKGBUILD (pacman-contrib)
+
+# use sha256sums (recommended) or sha512sums
+# use 'SKIP' for VCS sources (git, svn)
+
+@code bash
+# ---- submitting to AUR ----
+
+# 1. create account at https://aur.archlinux.org
+# 2. add SSH key to AUR account
+# 3. clone the AUR repo
+git clone ssh://aur@aur.archlinux.org/mypackage.git
+
+# 4. add PKGBUILD and .SRCINFO
+cp PKGBUILD mypackage/
+cd mypackage
+makepkg --printsrcinfo > .SRCINFO
+
+# 5. commit and push
+git add PKGBUILD .SRCINFO
+git commit -m "Initial upload: mypackage 1.0.0"
+git push
+
+@text
+AUR guidelines:
+- Always review PKGBUILDs before building (security)
+- Never run makepkg as root
+- The base-devel group is assumed installed and should not be in makedepends
+- Use namcap to check PKGBUILD quality: `namcap PKGBUILD && namcap *.pkg.tar.zst`

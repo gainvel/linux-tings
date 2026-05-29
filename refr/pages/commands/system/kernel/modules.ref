@@ -1,0 +1,151 @@
+---
+title: Kernel Modules
+order: 1
+description: lsmod, modprobe, modinfo, rmmod, blacklisting
+tags: [kernel, modules, lsmod, modprobe, modinfo, rmmod, blacklist]
+---
+
+Kernel modules are loadable drivers and features that extend kernel functionality without recompiling.
+
+@text
+Listing Modules
+
+@code bash
+# List all loaded modules
+lsmod
+
+# List loaded modules sorted by size
+lsmod | sort -k2 -n -r
+
+# Check if a specific module is loaded
+lsmod | grep nvidia
+
+# Count loaded modules
+lsmod | wc -l
+
+@text
+Module Information
+
+@code bash
+# Show detailed info about a module
+modinfo nvidia
+
+# Show only specific fields
+modinfo -F description nvidia
+modinfo -F depends nvidia
+modinfo -F parm nvidia          # Parameters the module accepts
+modinfo -F filename nvidia      # Path to .ko file
+
+# Find which module provides a device
+# Check device's modalias
+cat /sys/class/net/eth0/device/modalias
+modprobe --show-depends $(cat /sys/class/net/eth0/device/modalias)
+
+@text
+Loading Modules
+
+@code bash
+# Load a module
+sudo modprobe nvidia
+
+# Load with parameters
+sudo modprobe nvidia NVreg_UsePageAttributeTable=1
+
+# Load a module and all dependencies
+sudo modprobe snd_hda_intel
+
+# Dry run — show what would be loaded
+modprobe --show-depends snd_hda_intel
+
+# Load from a specific file (rarely needed)
+sudo insmod /lib/modules/$(uname -r)/kernel/drivers/gpu/drm/nvidia/nvidia.ko
+
+@text
+Removing Modules
+
+@code bash
+# Remove a module
+sudo modprobe -r nvidia
+
+# Remove and all unused dependencies
+sudo modprobe -r nvidia
+
+# Force remove (dangerous — may crash system)
+sudo rmmod -f nvidia
+
+# Remove fails if module is in use — check users
+lsmod | grep nvidia   # look at "Used by" column
+
+@text
+Persistent Module Loading
+
+@code bash
+# Load modules at boot — create a .conf file in /etc/modules-load.d/
+echo "nvidia" | sudo tee /etc/modules-load.d/nvidia.conf
+
+# Multiple modules in one file
+sudo tee /etc/modules-load.d/custom.conf << 'EOF'
+# Custom modules
+nvidia
+nvidia_modeset
+nvidia_uvm
+nvidia_drm
+EOF
+
+@text
+Module Parameters
+
+@code bash
+# View current parameters of a loaded module
+systool -v -m nvidia | grep parm
+# or
+ls /sys/module/nvidia/parameters/
+cat /sys/module/nvidia/parameters/NVreg_UsePageAttributeTable
+
+# Set parameters at load time via /etc/modprobe.d/
+sudo tee /etc/modprobe.d/nvidia.conf << 'EOF'
+options nvidia NVreg_UsePageAttributeTable=1
+options nvidia_drm modeset=1
+EOF
+
+# Set parameters at boot via kernel command line (GRUB)
+# In /etc/default/grub:
+# GRUB_CMDLINE_LINUX_DEFAULT="nvidia-drm.modeset=1"
+
+@text
+Blacklisting Modules
+
+Prevent a module from loading automatically.
+
+@code bash
+# Blacklist via modprobe config
+sudo tee /etc/modprobe.d/blacklist-nouveau.conf << 'EOF'
+blacklist nouveau
+options nouveau modeset=0
+EOF
+
+# Blacklist at boot (kernel parameter)
+# In /etc/default/grub:
+# GRUB_CMDLINE_LINUX_DEFAULT="modprobe.blacklist=nouveau"
+
+# Verify a module is blacklisted
+modprobe --showconfig | grep blacklist | grep nouveau
+
+# After blacklisting, rebuild initramfs if the module was included
+sudo mkinitcpio -P
+
+@text
+Module Dependencies
+
+@code bash
+# Show module dependency tree
+modprobe --show-depends nvidia
+
+# View the modules.dep file
+less /lib/modules/$(uname -r)/modules.dep
+
+# Regenerate module dependencies (after manual module install)
+sudo depmod -a
+
+# Check for a specific module
+depmod -n | grep nvidia

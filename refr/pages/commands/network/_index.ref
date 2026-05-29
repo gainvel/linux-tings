@@ -1,0 +1,8 @@
+---
+title: Networking
+order: 5
+description: Networking and remote access
+tags: [network, ip, ssh, dns, firewall]
+---
+
+Network configuration, diagnostics, file transfer, and remote access tools.

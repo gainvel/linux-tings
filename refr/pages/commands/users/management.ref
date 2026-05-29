@@ -1,0 +1,185 @@
+---
+title: User Management
+order: 1
+description: useradd, usermod, userdel, passwd, chsh, chfn
+tags: [useradd, usermod, userdel, passwd, chsh, users]
+---
+
+Tools for creating, modifying, and deleting user accounts.
+
+@text
+useradd — Create Users
+
+@code bash
+# Create a user with home directory and default shell
+sudo useradd -m -s /bin/bash username
+
+# Create with specific UID
+sudo useradd -m -u 1500 -s /bin/bash username
+
+# Create with specific groups (primary + supplementary)
+sudo useradd -m -g users -G wheel,audio,video -s /bin/bash username
+
+# Create with a comment (full name)
+sudo useradd -m -c "John Doe" -s /bin/bash john
+
+# Create with specific home directory
+sudo useradd -m -d /home/custom username
+
+# Create with expiration date
+sudo useradd -m -e 2026-12-31 -s /bin/bash tempuser
+
+# Create a system user (no home, no login)
+sudo useradd -r -s /usr/bin/nologin serviceuser
+
+# Create and set password in one step
+sudo useradd -m -s /bin/bash username
+sudo passwd username
+
+# View defaults
+useradd -D
+
+@text
+usermod — Modify Users
+
+@code bash
+# Change username
+sudo usermod -l newname oldname
+
+# Change home directory (and move contents)
+sudo usermod -d /home/newhome -m username
+
+# Change default shell
+sudo usermod -s /bin/zsh username
+
+# Change primary group
+sudo usermod -g newgroup username
+
+# Add to supplementary groups (append)
+sudo usermod -aG wheel username
+sudo usermod -aG docker,libvirt username
+
+# IMPORTANT: always use -a with -G to append
+# Without -a, -G replaces ALL supplementary groups!
+
+# Lock an account (disable login)
+sudo usermod -L username
+
+# Unlock an account
+sudo usermod -U username
+
+# Set account expiration date
+sudo usermod -e 2026-12-31 username
+
+# Remove account expiration
+sudo usermod -e "" username
+
+# Change UID
+sudo usermod -u 2000 username
+
+# Change comment (full name)
+sudo usermod -c "Jane Doe" username
+
+@text
+userdel — Delete Users
+
+@code bash
+# Delete user (keep home directory)
+sudo userdel username
+
+# Delete user and their home directory
+sudo userdel -r username
+
+# Force delete (even if user is logged in)
+sudo userdel -f username
+
+# Before deleting, check for running processes
+ps -u username
+
+# Find all files owned by user (after deletion, find orphans)
+find / -user username 2>/dev/null
+find / -uid 1001 2>/dev/null       # by UID if user already deleted
+
+@text
+passwd — Password Management
+
+@code bash
+# Change your own password
+passwd
+
+# Change another user's password (as root)
+sudo passwd username
+
+# Lock password (disable password login)
+sudo passwd -l username
+
+# Unlock password
+sudo passwd -u username
+
+# Delete password (allow passwordless login — dangerous)
+sudo passwd -d username
+
+# Force password change on next login
+sudo passwd -e username
+
+# Set password expiry (max days)
+sudo passwd -x 90 username
+
+# Set minimum days between password changes
+sudo passwd -n 7 username
+
+# Set warning days before expiry
+sudo passwd -w 14 username
+
+# View password status
+sudo passwd -S username
+# Fields: username, status (P=set, L=locked, NP=no password),
+# last change, min, max, warn, inactive
+
+@text
+chsh — Change Shell
+
+@code bash
+# Change your own login shell
+chsh -s /bin/zsh
+
+# Change another user's shell (as root)
+sudo chsh -s /bin/bash username
+
+# List available shells
+cat /etc/shells
+chsh -l
+
+@text
+chfn — Change User Information
+
+@code bash
+# Change your finger information interactively
+chfn
+
+# Set full name
+sudo chfn -f "John Doe" username
+
+# Set office room
+sudo chfn -r "Room 42" username
+
+# Set office phone
+sudo chfn -o "555-1234" username
+
+# Set home phone
+sudo chfn -h "555-5678" username
+
+@text
+User Files
+
+@code bash
+# Key user-related files:
+cat /etc/passwd       # user accounts (name:x:uid:gid:comment:home:shell)
+cat /etc/shadow       # password hashes (root only)
+cat /etc/login.defs   # default user creation settings
+cat /etc/default/useradd  # useradd defaults
+cat /etc/skel/        # skeleton files copied to new home dirs
+
+# View a specific user's entry
+grep "^username:" /etc/passwd
+getent passwd username

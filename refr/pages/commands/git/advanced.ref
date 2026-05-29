@@ -1,0 +1,106 @@
+---
+title: Advanced
+order: 6
+description: Cherry-pick, reset, revert, reflog, clean, and worktree
+tags: [git, cherry-pick, reset, revert, reflog, clean, worktree]
+---
+
+Operations that rewrite history or manage multiple working trees.
+
+@code bash
+# Cherry-pick: apply specific commits to current branch
+git cherry-pick abc1234
+git cherry-pick abc1234 def5678          # multiple commits
+git cherry-pick main~3..main            # range of commits
+git cherry-pick --no-commit abc1234     # apply without committing
+git cherry-pick --abort                  # cancel on conflict
+git cherry-pick --continue              # after resolving conflicts
+
+@text
+Reset moves the branch pointer. Affects staging area and working tree
+depending on the mode. Only use on unpublished commits.
+
+@code bash
+# Reset modes
+git reset --soft HEAD~1          # undo commit, keep changes staged
+git reset --mixed HEAD~1         # undo commit, keep changes unstaged (default)
+git reset --hard HEAD~1          # undo commit, discard all changes (dangerous)
+git reset HEAD file.go           # unstage a file (keep changes)
+
+# Reset to a specific commit
+git reset --soft abc1234
+git reset --hard origin/main     # match remote exactly (dangerous)
+
+@text
+Revert creates a new commit that undoes a previous commit. Safe for
+published history since it does not rewrite commits.
+
+@code bash
+# Revert a commit
+git revert abc1234
+git revert HEAD                  # revert last commit
+git revert --no-commit abc1234   # apply revert without committing
+git revert --no-commit HEAD~3..HEAD  # revert last 3 commits
+git revert -m 1 abc1234         # revert a merge commit (keep parent 1)
+git revert --abort               # cancel on conflict
+
+@text
+Reflog records every change to branch tips and HEAD. Your safety net
+for recovering lost commits.
+
+@code bash
+# View reflog
+git reflog                       # HEAD movements
+git reflog show main             # specific branch
+git reflog --date=relative       # with timestamps
+
+# Recover a lost commit
+git reflog                       # find the commit hash
+git checkout abc1234             # inspect it
+git branch recovered abc1234    # create branch to save it
+
+# Recover after bad reset
+git reflog
+git reset --hard HEAD@{3}       # go back to state 3 moves ago
+
+# Reflog entries expire (default 90 days for reachable, 30 unreachable)
+git reflog expire --expire=now --all   # force expire (rarely needed)
+
+@text
+Clean removes untracked files from the working tree. Useful for build
+artifacts not in .gitignore.
+
+@code bash
+# Preview what would be removed
+git clean -n                     # dry run
+git clean -nd                    # dry run including directories
+
+# Remove untracked files
+git clean -f                     # force required (safety)
+git clean -fd                    # include untracked directories
+git clean -fx                    # include ignored files
+git clean -fxd                   # untracked + ignored + directories
+git clean -i                     # interactive mode
+
+@text
+Worktree lets you check out multiple branches simultaneously in separate
+directories. Each worktree has its own working tree and index.
+
+@code bash
+# Create a worktree
+git worktree add ../hotfix main           # new worktree from main
+git worktree add ../experiment            # new branch + worktree
+git worktree add -b fix-99 ../fix origin/main  # new branch from remote
+
+# List worktrees
+git worktree list
+
+# Remove a worktree
+git worktree remove ../hotfix
+git worktree remove --force ../broken    # if unclean
+
+# Prune stale worktree metadata
+git worktree prune
+
+# Move a worktree
+git worktree move ../hotfix ../urgent-fix

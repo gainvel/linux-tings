@@ -1,0 +1,127 @@
+---
+title: Special Bits
+order: 2
+description: SUID, SGID, sticky bit, and umask
+tags: [permissions, suid, sgid, sticky, umask]
+---
+
+Special permission bits modify standard Unix access control. SUID and SGID affect execution identity. Sticky bit restricts deletion. umask sets default permissions for new files.
+
+@text
+SUID (Set User ID) — when set on an executable, it runs as the file owner instead of the calling user. Shown as 's' in the user execute position.
+
+@code bash
+# Set SUID
+sudo chmod u+s /usr/bin/program
+sudo chmod 4755 /usr/bin/program
+
+# Remove SUID
+sudo chmod u-s /usr/bin/program
+
+# Common SUID binaries
+ls -l /usr/bin/passwd         # -rwsr-xr-x (runs as root to edit /etc/shadow)
+ls -l /usr/bin/sudo           # -rwsr-xr-x
+
+# Find all SUID files on the system (security audit)
+sudo find / -perm -4000 -type f -ls 2>/dev/null
+
+# Note: SUID is ignored on scripts (only works on compiled binaries)
+# Note: SUID on a non-executable file shows 'S' (capital) = no effect
+
+@text
+SGID (Set Group ID) — on executables, runs as the file's group. On directories, new files inherit the directory's group instead of the creator's primary group.
+
+@code bash
+# Set SGID on a file
+sudo chmod g+s program
+sudo chmod 2755 program
+
+# Set SGID on a directory (most common use)
+sudo chmod g+s /shared/projects/
+sudo chmod 2775 /shared/projects/
+
+# New files in an SGID directory inherit its group
+sudo mkdir /shared/team
+sudo chgrp developers /shared/team
+sudo chmod 2775 /shared/team
+# Now any file created in /shared/team belongs to group 'developers'
+
+# Remove SGID
+sudo chmod g-s directory/
+
+# Find all SGID files
+sudo find / -perm -2000 -type f -ls 2>/dev/null
+
+# Find all SGID directories
+find / -perm -2000 -type d -ls 2>/dev/null
+
+@text
+Sticky bit — on directories, only the file owner (or root) can delete or rename files within, even if others have write permission. Shown as 't' in the others execute position.
+
+@code bash
+# Set sticky bit
+sudo chmod +t /shared/dir
+sudo chmod 1777 /tmp
+
+# Remove sticky bit
+sudo chmod -t /shared/dir
+
+# /tmp is the classic sticky bit directory
+ls -ld /tmp                   # drwxrwxrwt
+
+# Create a shared directory where everyone can write but only owners can delete
+sudo mkdir /shared/dropbox
+sudo chmod 1777 /shared/dropbox
+
+@text
+Combining special bits with numeric mode:
+
+  Numeric prefix:
+    4 = SUID
+    2 = SGID
+    1 = sticky bit
+
+@code bash
+chmod 4755 file     # SUID + rwxr-xr-x
+chmod 2755 dir      # SGID + rwxr-xr-x
+chmod 1777 dir      # sticky + rwxrwxrwx
+chmod 6755 file     # SUID + SGID + rwxr-xr-x
+
+# Permission display:
+#   -rwsr-xr-x    SUID set, user has x
+#   -rwSr-xr-x    SUID set, user lacks x (uppercase S = not effective)
+#   -rwxr-sr-x    SGID set, group has x
+#   drwxrwxrwt    sticky set, others have x
+#   drwxrwxrwT    sticky set, others lack x
+
+@text
+umask — default permission mask for new files and directories.
+
+@code bash
+# Show current umask
+umask              # numeric (e.g., 0022)
+umask -S           # symbolic (e.g., u=rwx,g=rx,o=rx)
+
+# How umask works:
+#   New file default:      0666 (rw-rw-rw-)
+#   New directory default: 0777 (rwxrwxrwx)
+#   umask is subtracted:   result = default - umask
+#
+#   umask 0022: files=644, dirs=755
+#   umask 0077: files=600, dirs=700
+#   umask 0002: files=664, dirs=775
+
+# Set umask for current session
+umask 0022          # standard (owner rw, group/others r)
+umask 0077          # restrictive (owner only)
+umask 0002          # collaborative (group write)
+
+# Set permanent umask in ~/.bashrc or /etc/profile
+# umask 0022
+
+# Verify: create a file and check permissions
+umask 0022
+touch testfile
+ls -l testfile      # -rw-r--r-- (0644)
+mkdir testdir
+ls -ld testdir      # drwxr-xr-x (0755)

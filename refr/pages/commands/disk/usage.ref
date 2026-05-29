@@ -1,0 +1,143 @@
+---
+title: Usage
+order: 7
+description: Disk space usage — df, du, ncdu, lsblk
+tags: [disk, df, du, ncdu, usage, space]
+---
+
+Commands for checking disk space consumption at the filesystem, directory, and file level.
+
+@text
+df — report filesystem disk space usage.
+
+@code bash
+# Show all mounted filesystems (human-readable)
+df -h
+
+# Show specific filesystem
+df -h /home
+
+# Show filesystem type
+df -hT
+
+# Show only local filesystems (exclude tmpfs, devtmpfs, etc.)
+df -hl
+
+# Show inode usage instead of block usage
+df -i
+
+# Output specific filesystem types
+df -t ext4 -t btrfs
+
+# Exclude certain filesystem types
+df -x tmpfs -x devtmpfs -h
+
+@text
+du — estimate file and directory space usage.
+
+@code bash
+# Size of a directory (summary)
+du -sh /var/log
+
+# Size of each subdirectory
+du -h --max-depth=1 /var
+
+# Same as above (short form)
+du -h -d1 /var
+
+# Sort by size (largest last)
+du -h -d1 /var | sort -h
+
+# Sort by size (largest first)
+du -h -d1 /var | sort -hr
+
+# Top 10 largest directories under current path
+du -h -d1 . | sort -hr | head -10
+
+# Size of specific files
+du -h *.log
+
+# Total size of multiple paths
+du -shc /var/log /var/cache /tmp
+
+# Exclude patterns
+du -sh --exclude='*.log' /var
+
+# Show apparent size (actual bytes, not disk blocks)
+du -sh --apparent-size /path
+
+# Follow symlinks
+du -shL /path
+
+@text
+ncdu — interactive ncurses disk usage analyzer.
+
+@code bash
+# Install ncdu
+sudo pacman -S ncdu
+
+# Scan and browse current directory
+ncdu
+
+# Scan a specific directory
+ncdu /var
+
+# Scan root (exclude pseudo-filesystems)
+sudo ncdu / --exclude /proc --exclude /sys --exclude /dev --exclude /run
+
+# Export scan results to file
+ncdu -o scan.json /home
+
+# Browse saved scan
+ncdu -f scan.json
+
+# ncdu controls:
+#   arrows/j/k   navigate
+#   enter/right   open directory
+#   d             delete selected (with confirmation)
+#   n             sort by name
+#   s             sort by size
+#   g             toggle graph/percentage/both
+#   q             quit
+
+@text
+lsblk — disk and partition overview.
+
+@code bash
+# Show devices with sizes and mountpoints
+lsblk
+
+# Include filesystem type and usage
+lsblk -f
+
+# Show size, used, available, use%
+lsblk -o NAME,SIZE,FSTYPE,FSUSED,FSAVAIL,FSUSE%,MOUNTPOINT
+
+# Show only specific device
+lsblk /dev/sda
+
+@text
+Find large files.
+
+@code bash
+# Find files larger than 100 MiB
+find / -xdev -type f -size +100M -exec ls -lh {} \; 2>/dev/null
+
+# Find files larger than 1 GiB, sorted by size
+find / -xdev -type f -size +1G -printf '%s %p\n' 2>/dev/null | sort -rn | head -20
+
+# Find largest files in home directory
+find ~ -type f -printf '%s %p\n' | sort -rn | head -20
+
+# Find directories consuming most space
+find / -xdev -type d -exec du -sh {} + 2>/dev/null | sort -hr | head -20
+
+@text
+Check for deleted but still open files consuming space.
+
+@code bash
+# Files deleted but held open by processes (space not freed)
+sudo lsof +L1
+
+# Find large deleted files still consuming space
+sudo lsof +L1 | awk '$7 > 1048576 {print $7, $9}'

@@ -1,0 +1,180 @@
+---
+title: Job Control
+order: 3
+description: bg, fg, jobs, nohup, disown, &, Ctrl-Z, wait
+tags: [jobs, bg, fg, nohup, disown, background, foreground]
+---
+
+Shell job control for managing foreground and background processes.
+
+@text
+Background and Foreground
+
+@code bash
+# Run a command in the background
+long_running_command &
+
+# Suspend the current foreground process
+# Press Ctrl+Z
+# Shows: [1]+  Stopped     long_running_command
+
+# Resume in the background
+bg
+
+# Resume in the foreground
+fg
+
+# Resume a specific job (by job number)
+bg %1
+fg %2
+
+# Resume by job name prefix
+fg %long
+
+@text
+jobs — List Shell Jobs
+
+@code bash
+# List all jobs
+jobs
+
+# List with PIDs
+jobs -l
+
+# List only running jobs
+jobs -r
+
+# List only stopped jobs
+jobs -s
+
+# Job status indicators:
+# +  — current job (default for fg/bg)
+# -  — previous job
+# Running, Stopped, Done, Terminated
+
+@text
+Job Specifiers
+
+@code bash
+# %N     — job number N
+fg %1
+
+# %string — job whose command starts with string
+fg %vim
+
+# %?string — job whose command contains string
+fg %?script.py
+
+# %%  or  %+ — current job
+fg %%
+
+# %-  — previous job
+fg %-
+
+@text
+nohup — Survive Logout
+
+@code bash
+# Run a command that survives terminal close/logout
+nohup long_running_command &
+
+# Output goes to nohup.out by default
+# Redirect output explicitly
+nohup long_running_command > /tmp/output.log 2>&1 &
+
+# Check the PID
+echo $!
+
+@text
+disown — Detach from Shell
+
+@code bash
+# Start a process, then detach it from the shell
+long_running_command &
+disown
+
+# Disown a specific job
+long_running_command &
+another_command &
+disown %1
+
+# Disown all jobs
+disown -a
+
+# Disown and suppress SIGHUP (like nohup after the fact)
+long_running_command &
+disown -h %1
+
+# Common pattern: start, background, detach
+my_server &
+disown
+
+@text
+wait — Wait for Background Jobs
+
+@code bash
+# Wait for all background jobs to finish
+command1 &
+command2 &
+command3 &
+wait
+echo "All done"
+
+# Wait for a specific job
+command1 &
+pid1=$!
+command2 &
+pid2=$!
+wait $pid1
+echo "command1 done (exit code: $?)"
+wait $pid2
+echo "command2 done (exit code: $?)"
+
+# Wait with timeout (bash 4.3+)
+command &
+pid=$!
+if wait -n -t 30; then
+    echo "Finished within 30 seconds"
+else
+    echo "Timed out or failed"
+    kill $pid
+fi
+
+# Wait for any one background job to finish (bash 4.3+)
+cmd1 &
+cmd2 &
+cmd3 &
+wait -n
+echo "First one finished"
+
+@text
+Practical Patterns
+
+@code bash
+# Run command immune to hangup, with logging
+nohup ./deploy.sh > /var/log/deploy.log 2>&1 &
+echo "Deploy started as PID $!"
+
+# Start a background process and wait with timeout
+./build.sh &
+build_pid=$!
+( sleep 300 && kill $build_pid 2>/dev/null ) &
+timeout_pid=$!
+wait $build_pid
+kill $timeout_pid 2>/dev/null
+
+# Parallel execution with job control
+for file in *.csv; do
+    process_file "$file" &
+done
+wait    # wait for all to complete
+
+# Limit parallel jobs
+max_jobs=4
+for file in *.csv; do
+    while [ $(jobs -r | wc -l) -ge $max_jobs ]; do
+        wait -n
+    done
+    process_file "$file" &
+done
+wait

@@ -1,0 +1,86 @@
+---
+title: Basics
+order: 1
+description: Repository setup, staging, commits, and status
+tags: [git, init, clone, add, commit, status, gitignore]
+---
+
+Core workflow: init or clone a repo, stage changes, commit them.
+
+@code bash
+# Initialize a new repository
+git init
+git init my-project              # create repo in new directory
+
+# Clone an existing repository
+git clone https://github.com/user/repo.git
+git clone git@github.com:user/repo.git      # SSH
+git clone --depth 1 <url>                   # shallow clone (latest commit only)
+git clone --branch v2.0 <url>               # clone specific branch/tag
+git clone --recurse-submodules <url>         # include submodules
+
+@text
+Staging controls what goes into the next commit. The index (staging area)
+sits between the working tree and the repository.
+
+@code bash
+# Check working tree status
+git status
+git status -s                    # short format (XY path)
+git status -sb                   # short with branch info
+
+# Stage files
+git add file.go                  # stage single file
+git add src/ lib/                # stage directories
+git add -A                       # stage all changes (new, modified, deleted)
+git add -p                       # interactive hunk staging
+git add -u                       # stage modified/deleted only (no new files)
+
+# Unstage files
+git restore --staged file.go     # remove from staging (keep changes)
+git reset HEAD file.go           # same thing (older syntax)
+
+@text
+Commits record staged changes. Write clear, imperative-mood messages.
+
+@code bash
+# Commit staged changes
+git commit -m "add user auth module"
+git commit                       # open $EDITOR for message
+git commit -am "fix typo"        # stage tracked files + commit (skips untracked)
+git commit --amend               # modify last commit (message and/or content)
+git commit --amend --no-edit     # amend content, keep message
+git commit --allow-empty -m "trigger CI"
+
+# Show last commit
+git log -1
+git show HEAD
+
+@text
+The .gitignore file tells git which files to ignore. Patterns are matched
+against paths relative to the .gitignore location.
+
+@code bash
+# Common .gitignore patterns
+*.o                              # compiled objects
+*.log                            # log files
+build/                           # build output directory
+.env                             # environment secrets
+node_modules/                    # dependency directories
+__pycache__/                     # Python bytecode cache
+
+# Negate a pattern (include something otherwise ignored)
+!important.log
+
+# Ignore only in root directory
+/TODO
+
+# Check why a file is ignored
+git check-ignore -v path/to/file
+
+# Global gitignore (user-wide)
+git config --global core.excludesFile ~/.gitignore_global
+
+# Stop tracking a file without deleting it
+git rm --cached file.txt
+git rm -r --cached dir/          # recursive

@@ -1,0 +1,98 @@
+---
+title: Yay Basics
+order: 1
+description: yay -S, -Ss, -Si, -Sua, install AUR packages
+tags: [yay, aur, install, search, update]
+---
+
+Basic yay usage mirrors pacman syntax. yay searches both official repos
+and the AUR simultaneously.
+
+@code bash
+# ---- installing packages ----
+
+yay -S package                            # install (AUR or official)
+yay -S package1 package2                  # install multiple
+yay package                               # interactive search + install
+yay                                       # equivalent to yay -Syu (full upgrade)
+
+@text
+When installing an AUR package, yay will:
+1. Download the PKGBUILD from the AUR
+2. Show you the PKGBUILD for review (first install or changes)
+3. Resolve and install dependencies
+4. Build the package with makepkg
+5. Install the built package with pacman
+
+@code bash
+# ---- searching ----
+
+yay -Ss search-term                       # search AUR + repos
+yay -Ss --aur search-term                # AUR only
+yay -Ss --repo search-term              # repos only
+
+yay -Si package                           # info from repos or AUR
+yay -Si --aur package                    # AUR info only
+
+# interactive search
+yay search-term                           # list matches, select by number
+
+@code bash
+# ---- upgrading ----
+
+yay -Syu                                  # upgrade everything (repos + AUR)
+yay -Sua                                  # upgrade AUR packages only
+yay -Syu --devel                          # also check -git/-svn packages
+
+# check for updates without installing
+yay -Qu                                   # all updates available
+yay -Qua                                  # AUR updates only
+
+# check what would be upgraded
+checkupdates                              # official repos
+yay -Qua                                  # AUR
+
+@code bash
+# ---- querying ----
+
+yay -Qm                                   # list foreign packages (AUR/manual)
+yay -Qmq                                  # names only
+yay -Qi package                           # package info (same as pacman)
+yay -Ql package                           # list files (same as pacman)
+
+@code bash
+# ---- removing ----
+
+# removal is the same as pacman (yay passes through)
+yay -R package                            # remove
+yay -Rs package                           # remove + unneeded deps
+yay -Rns package                          # remove + deps + configs
+
+@code bash
+# ---- useful options ----
+
+yay -S package --noconfirm                # skip all prompts
+yay -S package --needed                   # skip if already installed
+yay -S package --mflags "--nocheck"       # skip check() in PKGBUILD
+yay -S package --rebuild                  # force rebuild
+yay -S package --redownload               # force re-download PKGBUILD
+
+# build in a clean chroot (avoids host pollution)
+yay -S package --sudoloop                 # keep sudo alive during long builds
+
+@text
+First-time setup: yay itself is installed from the AUR.
+
+@code bash
+# install yay
+pacman -S --needed git base-devel
+git clone https://aur.archlinux.org/yay.git
+cd yay
+makepkg -si
+cd .. && rm -rf yay
+
+# or use yay-bin (pre-built binary, faster)
+git clone https://aur.archlinux.org/yay-bin.git
+cd yay-bin
+makepkg -si
+cd .. && rm -rf yay-bin

@@ -1,0 +1,153 @@
+---
+title: Network Diagnostics
+order: 5
+description: ping, traceroute, mtr, ss, netstat, nmap, tcpdump
+tags: [ping, traceroute, mtr, ss, netstat, nmap, tcpdump, diagnostics]
+---
+
+Tools for testing connectivity, tracing routes, inspecting sockets, scanning
+ports, and capturing packets.
+
+@code bash
+# ---- ping: test connectivity ----
+
+ping example.com                          # continuous ping (Ctrl-C to stop)
+ping -c 4 example.com                    # send 4 packets
+ping -c 4 -i 0.2 example.com            # 200ms interval
+ping -w 5 example.com                    # timeout after 5 seconds
+ping -s 1472 -M do example.com          # test MTU (1472 + 28 header = 1500)
+ping -f example.com                      # flood ping (root, careful)
+ping -I eth0 example.com                 # bind to interface
+ping -t 10 example.com                   # set TTL
+
+# IPv6
+ping -6 example.com
+ping6 example.com                         # legacy command
+
+@code bash
+# ---- traceroute: trace packet path ----
+
+traceroute example.com                    # UDP probes (default)
+traceroute -I example.com                # ICMP probes
+traceroute -T example.com                # TCP SYN probes (bypasses some filters)
+traceroute -p 443 -T example.com         # TCP to specific port
+traceroute -n example.com                # no DNS resolution (faster)
+traceroute -m 20 example.com             # max 20 hops
+traceroute -w 2 example.com              # 2 second timeout per hop
+
+# tracepath: similar, no root needed, finds MTU
+tracepath example.com
+
+@code bash
+# ---- mtr: combined ping + traceroute ----
+
+mtr example.com                           # interactive (curses) mode
+mtr -n example.com                        # no DNS resolution
+mtr -r -c 100 example.com               # report mode, 100 cycles
+mtr -r -c 100 -w example.com            # wide report (full hostnames)
+mtr --tcp -P 443 example.com            # TCP mode, port 443
+mtr --udp example.com                    # UDP mode
+mtr -e example.com                       # show AS numbers
+mtr -z example.com                       # show AS numbers (alternate)
+mtr --json example.com                   # JSON output
+mtr -s 1472 example.com                 # packet size (MTU test)
+
+@code bash
+# ---- ss: socket statistics (replaces netstat) ----
+
+ss -tlnp                                  # TCP listening, numeric, with process
+ss -ulnp                                  # UDP listening, numeric, with process
+ss -tunap                                 # all TCP+UDP with process info
+ss -s                                     # socket summary statistics
+ss -t state established                   # established TCP connections
+ss -t state time-wait                     # TIME_WAIT connections
+
+# filtering
+ss -tn dst :443                           # connections to port 443
+ss -tn src :80                            # connections from local port 80
+ss -tn 'dport == 22'                      # destination port 22
+ss -tn 'sport > 1024'                     # source port > 1024
+ss -tn dst 192.168.1.0/24                # connections to subnet
+
+# show more detail
+ss -eti                                   # extended TCP info (retransmits, RTT)
+ss -m                                     # memory usage per socket
+
+@code bash
+# ---- netstat (legacy, from net-tools) ----
+
+netstat -tlnp                             # TCP listening with process
+netstat -ulnp                             # UDP listening with process
+netstat -anp                              # all connections with process
+netstat -rn                               # routing table (use ip route instead)
+netstat -s                                # protocol statistics
+netstat -i                                # interface statistics
+
+@code bash
+# ---- nmap: network scanner ----
+
+# host discovery
+nmap -sn 192.168.1.0/24                  # ping scan (no port scan)
+nmap -sL 192.168.1.0/24                  # list targets (DNS only)
+
+# port scanning
+nmap 192.168.1.1                          # top 1000 ports
+nmap -p 22,80,443 192.168.1.1           # specific ports
+nmap -p 1-1024 192.168.1.1              # port range
+nmap -p- 192.168.1.1                     # all 65535 ports
+nmap -F 192.168.1.1                      # fast scan (top 100)
+
+# scan types
+nmap -sS 192.168.1.1                     # SYN scan (stealthy, default w/ root)
+nmap -sT 192.168.1.1                     # TCP connect scan
+nmap -sU 192.168.1.1                     # UDP scan
+nmap -sV 192.168.1.1                     # version detection
+nmap -O 192.168.1.1                      # OS detection
+nmap -A 192.168.1.1                      # aggressive (OS + version + scripts)
+
+# output
+nmap -oN scan.txt 192.168.1.1           # normal output
+nmap -oX scan.xml 192.168.1.1           # XML output
+nmap -oG scan.grep 192.168.1.1          # grepable output
+
+# useful combinations
+nmap -sS -sV -p- --open 192.168.1.1    # all open ports with versions
+nmap -sn -PR 192.168.1.0/24             # ARP discovery (local net)
+
+@code bash
+# ---- tcpdump: packet capture ----
+
+# basic capture
+tcpdump -i eth0                           # all traffic on interface
+tcpdump -i any                            # all interfaces
+tcpdump -i eth0 -c 100                   # capture 100 packets
+tcpdump -i eth0 -w capture.pcap          # write to file
+tcpdump -r capture.pcap                  # read from file
+
+# display options
+tcpdump -i eth0 -n                       # no DNS resolution
+tcpdump -i eth0 -nn                      # no DNS or port name resolution
+tcpdump -i eth0 -v                       # verbose
+tcpdump -i eth0 -X                       # hex + ASCII payload
+tcpdump -i eth0 -A                       # ASCII payload only
+tcpdump -i eth0 -e                       # show MAC addresses
+
+# filters (BPF syntax)
+tcpdump -i eth0 host 192.168.1.1                    # specific host
+tcpdump -i eth0 src 192.168.1.1                     # source only
+tcpdump -i eth0 dst 192.168.1.1                     # destination only
+tcpdump -i eth0 port 80                              # specific port
+tcpdump -i eth0 tcp                                  # TCP only
+tcpdump -i eth0 udp                                  # UDP only
+tcpdump -i eth0 icmp                                 # ICMP only
+tcpdump -i eth0 'tcp port 80 and host 192.168.1.1'  # combined
+tcpdump -i eth0 'tcp[tcpflags] & tcp-syn != 0'      # SYN packets
+tcpdump -i eth0 not port 22                          # exclude SSH
+
+@text
+Tips:
+- Use `ss` over `netstat`; it is faster and more featureful.
+- mtr is excellent for diagnosing intermittent packet loss on a path.
+- Always use `-n` with tcpdump to avoid slow DNS lookups during capture.
+- tcpdump captures can be opened in Wireshark for detailed analysis.
+- nmap scans against networks you do not own may be illegal or against policy.

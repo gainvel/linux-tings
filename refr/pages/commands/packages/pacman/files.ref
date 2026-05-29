@@ -1,0 +1,81 @@
+---
+title: File Database
+order: 7
+description: -F, -Fl, -Fo, pkgfile
+tags: [pacman, files, pkgfile, search, owns]
+---
+
+Finding which package provides a specific file, even for packages not
+currently installed. Requires the file database to be synced.
+
+@code bash
+# ---- pacman file database (-F) ----
+
+# sync the file database (must do before first use)
+pacman -Fy                                # download file lists
+pacman -Fyy                               # force refresh
+
+# search for a file across all packages
+pacman -F filename                        # find packages containing filename
+pacman -F /usr/bin/vim                    # find package that provides vim
+pacman -Fx 'bin/gcc$'                     # regex search
+
+# list files in a remote package (not installed)
+pacman -Fl package                        # list all files
+pacman -Flq package                       # files only (no package prefix)
+
+# find which package owns a file (remote packages)
+pacman -Fo /usr/bin/curl                  # which remote package provides this
+
+@text
+The difference between -Qo and -Fo:
+- `pacman -Qo /usr/bin/curl` searches locally installed packages only
+- `pacman -Fo /usr/bin/curl` searches the remote file database (all repos)
+
+Use -Fo when you need to find which package to install for a missing command.
+
+@code bash
+# ---- pkgfile: faster alternative ----
+
+# install
+pacman -S pkgfile
+
+# update the file database
+pkgfile --update
+
+# search for a file
+pkgfile curl                              # which package provides 'curl'
+pkgfile -v curl                           # verbose (show version, repo)
+pkgfile -b curl                           # search in bin directories only
+pkgfile -d curl                           # search description too
+
+# list files in a package
+pkgfile -l package                        # list all files
+pkgfile -lb package                       # list binaries only
+
+@code bash
+# ---- command-not-found integration ----
+
+# pkgfile can suggest packages when a command is not found
+# add to ~/.bashrc:
+
+source /usr/share/doc/pkgfile/command-not-found.bash
+
+# now when you type a missing command:
+# $ htop
+# htop may be found in the following packages:
+#   extra/htop 3.3.0-1    /usr/bin/htop
+
+@code bash
+# ---- practical examples ----
+
+# "I need to compile C code, which package has gcc?"
+pacman -F gcc
+pkgfile -b gcc
+
+# "I need libssl.so, which package provides it?"
+pacman -F libssl.so
+
+# "What files does the 'openssh' package install?"
+pacman -Fl openssh | grep bin/            # find its executables
+pacman -Ql openssh                        # if already installed (local query)

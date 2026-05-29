@@ -1,0 +1,67 @@
+---
+title: Stashing
+order: 5
+description: Stash, pop, list, drop, and apply
+tags: [git, stash, push, pop, apply, drop, wip]
+---
+
+Stash temporarily shelves working tree changes so you can switch context
+without committing half-done work.
+
+@code bash
+# Stash current changes
+git stash                        # stash tracked modified files
+git stash push                   # same as above (explicit form)
+git stash push -m "wip: auth"   # with descriptive message
+git stash -u                     # include untracked files
+git stash -a                     # include untracked + ignored files
+git stash push -m "partial" -- file1.go file2.go  # specific files
+git stash -p                     # interactively select hunks
+
+@text
+Each stash is stored on a stack. The most recent is stash@{0}.
+
+@code bash
+# List stashes
+git stash list
+# stash@{0}: On main: wip: auth
+# stash@{1}: WIP on feature: abc1234 previous message
+
+# Show stash contents
+git stash show                   # stat summary of latest stash
+git stash show -p                # full diff of latest stash
+git stash show stash@{2}         # specific stash
+git stash show -p stash@{1}     # full diff of specific stash
+
+@text
+Apply restores stash changes to the working tree. Pop applies and
+removes the stash; apply keeps it for reuse.
+
+@code bash
+# Restore stashed changes
+git stash pop                    # apply latest + remove from stack
+git stash pop stash@{2}         # apply specific stash + remove
+git stash apply                  # apply latest, keep on stack
+git stash apply stash@{1}       # apply specific, keep on stack
+
+# Apply and recreate index state
+git stash pop --index            # restore staged files as staged
+
+@text
+Cleaning up old stashes.
+
+@code bash
+# Remove stashes
+git stash drop                   # remove latest stash
+git stash drop stash@{3}        # remove specific stash
+git stash clear                  # remove all stashes (irreversible)
+
+@text
+Creating a branch from a stash is useful when stashed changes conflict
+with current work.
+
+@code bash
+# Create branch from stash
+git stash branch new-feature             # from latest stash
+git stash branch fix-123 stash@{2}      # from specific stash
+# Creates branch, checks it out, applies stash, drops it if clean

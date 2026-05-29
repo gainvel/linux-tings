@@ -1,0 +1,105 @@
+---
+title: Links
+order: 4
+description: Symbolic and hard links — ln, readlink
+tags: [files, ln, symlink, hardlink, readlink, links]
+---
+
+Links create additional references to files. Symbolic (soft) links are pointers to a path. Hard links are additional directory entries pointing to the same inode.
+
+@text
+Symbolic links vs hard links:
+
+  Symbolic (soft) link:
+  - Points to a pathname, not the data
+  - Can cross filesystem boundaries
+  - Can link to directories
+  - Breaks if target is moved or deleted (dangling link)
+  - Has its own inode and permissions (target permissions apply)
+
+  Hard link:
+  - Points directly to the same inode (same data on disk)
+  - Cannot cross filesystem boundaries
+  - Cannot link to directories (except . and ..)
+  - Original and link are indistinguishable; data persists until all links removed
+  - Shares inode, permissions, ownership, and timestamps
+
+@text
+Create and manage symbolic links.
+
+@code bash
+# Create a symbolic link
+ln -s /path/to/target linkname
+
+# Create symlink in current directory with same name as target
+ln -s /path/to/target .
+
+# Overwrite existing link
+ln -sf /path/to/new-target linkname
+
+# Create relative symlink
+ln -sr target linkname
+
+# Create symlink to a directory
+ln -s /var/log /home/user/logs
+
+# Verify a symlink
+ls -l linkname              # shows linkname -> target
+
+# Read where a symlink points
+readlink linkname
+
+# Resolve full canonical path (follow all symlinks)
+readlink -f linkname
+
+# Resolve path but don't require last component to exist
+readlink -m /path/that/may/not/exist
+
+# realpath — similar to readlink -f
+realpath linkname
+
+# Find all symlinks in a directory
+find /etc -type l
+
+# Find broken (dangling) symlinks
+find /path -xtype l
+
+# Find all symlinks pointing to a specific target
+find / -lname "/path/to/target" 2>/dev/null
+
+@text
+Create and manage hard links.
+
+@code bash
+# Create a hard link
+ln target hardlink
+
+# Verify hard link (same inode number)
+ls -li target hardlink
+stat target hardlink
+
+# Find all hard links to a file (by inode number)
+INODE=$(stat -c %i target)
+find / -xdev -inum "$INODE" 2>/dev/null
+
+# Check link count for a file
+stat -c '%h' filename
+
+@text
+Practical examples.
+
+@code bash
+# Symlink dotfiles to a repo
+ln -sf ~/dotfiles/.bashrc ~/.bashrc
+ln -sf ~/dotfiles/.vimrc ~/.vimrc
+
+# Symlink a config directory
+ln -s ~/dotfiles/nvim ~/.config/nvim
+
+# Alternative binary version (e.g., python)
+sudo ln -sf /usr/bin/python3 /usr/local/bin/python
+
+# Backup rotation with hard links (space-efficient)
+# Hard-link unchanged files from previous backup
+cp -al /backup/previous/ /backup/current/
+rsync -a --delete /source/ /backup/current/

@@ -1,0 +1,166 @@
+---
+title: Priority & Resources
+order: 5
+description: nice, renice, ionice, chrt, cpulimit
+tags: [nice, renice, ionice, chrt, cpulimit, priority, scheduling]
+---
+
+Process priority and resource control — CPU scheduling, I/O priority, and CPU usage limiting.
+
+@text
+nice — Set CPU Priority at Launch
+
+Nice values range from -20 (highest priority) to 19 (lowest). Default is 0. Only root can set negative values.
+
+@code bash
+# Run a command with lower priority (nicer to other processes)
+nice -n 10 make -j$(nproc)
+
+# Run with lowest priority
+nice -n 19 find / -name "*.log" -size +100M
+
+# Run with higher priority (requires root)
+sudo nice -n -10 /usr/bin/important-task
+
+# Run with highest priority (requires root)
+sudo nice -n -20 /usr/bin/critical-task
+
+# Default nice value when using nice without -n
+nice make        # runs at nice 10
+
+@text
+renice — Change Priority of Running Process
+
+@code bash
+# Reduce priority of a running process
+renice 10 -p 1234
+
+# Set highest nice (lowest priority)
+renice 19 -p 1234
+
+# Increase priority (requires root)
+sudo renice -5 -p 1234
+
+# Renice all processes by a user
+sudo renice 10 -u username
+
+# Renice a process group
+sudo renice 10 -g 1234
+
+# Check current nice value
+ps -o pid,ni,comm -p 1234
+
+@text
+ionice — I/O Scheduling Priority
+
+Controls disk I/O priority. Three scheduling classes: Realtime (1), Best-effort (2), Idle (3).
+
+@code bash
+# Run a command with idle I/O priority (won't interfere with other I/O)
+ionice -c 3 rsync -a /source/ /dest/
+
+# Run with best-effort, low priority (class 2, level 7)
+ionice -c 2 -n 7 tar czf backup.tar.gz /data
+
+# Run with realtime I/O (requires root, use carefully)
+sudo ionice -c 1 -n 0 dd if=/dev/sda of=/dev/sdb bs=4M
+
+# Check I/O priority of a process
+ionice -p 1234
+
+# Change I/O priority of a running process
+ionice -c 3 -p 1234
+sudo ionice -c 2 -n 0 -p 1234
+
+# I/O scheduling classes:
+# 1 = Realtime    — highest priority, preempts others (root only)
+#                   Levels 0-7, lower = higher priority
+# 2 = Best-effort — default class
+#                   Levels 0-7, lower = higher priority
+# 3 = Idle        — only gets I/O when nobody else needs it
+#                   No priority levels
+
+# Combine nice and ionice for background tasks
+nice -n 19 ionice -c 3 updatedb
+
+@text
+chrt — Realtime Scheduling
+
+Set the realtime scheduling policy and priority. Use with extreme caution — can starve other processes.
+
+@code bash
+# Run with SCHED_FIFO (realtime first-in-first-out)
+sudo chrt -f 50 /usr/bin/realtime-app
+
+# Run with SCHED_RR (realtime round-robin)
+sudo chrt -r 50 /usr/bin/realtime-app
+
+# Run with SCHED_BATCH (throughput-oriented)
+chrt -b 0 make -j$(nproc)
+
+# Run with SCHED_IDLE (very low priority)
+chrt -i 0 find / -name "*.tmp" -delete
+
+# Run with SCHED_DEADLINE (requires root, kernel support)
+sudo chrt -d --sched-runtime 500000 --sched-deadline 1000000 \
+  --sched-period 1000000 0 /usr/bin/deadline-app
+
+# Check scheduling policy of a running process
+chrt -p 1234
+
+# Change policy of a running process
+sudo chrt -f -p 50 1234
+
+# View valid priority ranges
+chrt --max
+
+# Scheduling policies:
+# SCHED_OTHER (0)  — default time-sharing (use nice for priority)
+# SCHED_FIFO  (1)  — realtime FIFO, runs until it yields or higher priority preempts
+# SCHED_RR    (2)  — realtime round-robin, like FIFO with time slice
+# SCHED_BATCH (3)  — batch scheduling, for CPU-intensive non-interactive tasks
+# SCHED_IDLE  (5)  — extremely low priority
+# Priority range for realtime: 1-99 (higher = more priority)
+
+@text
+cpulimit — Limit CPU Usage Percentage
+
+@code bash
+# Install cpulimit
+sudo pacman -S cpulimit
+
+# Limit a running process to 50% CPU
+cpulimit -p 1234 -l 50
+
+# Limit by process name
+cpulimit -e ffmpeg -l 200    # 200% = 2 full cores
+
+# Launch a command with CPU limit
+cpulimit -l 75 -- make -j$(nproc)
+
+# Run in background
+cpulimit -p 1234 -l 50 -b
+
+# Limit values: per-core percentage
+# 50  = 50% of one core
+# 100 = one full core
+# 200 = two full cores
+
+@text
+cgroups — Resource Groups
+
+@code bash
+# Check cgroup version
+mount | grep cgroup
+stat -f --format=%T /sys/fs/cgroup/    # cgroup2fs = v2, tmpfs = v1
+
+# Limit CPU for a group of processes (cgroup v2)
+sudo mkdir /sys/fs/cgroup/limited
+echo "50000 100000" | sudo tee /sys/fs/cgroup/limited/cpu.max  # 50% of one CPU
+echo $$ | sudo tee /sys/fs/cgroup/limited/cgroup.procs         # add current shell
+
+# Limit memory
+echo "512M" | sudo tee /sys/fs/cgroup/limited/memory.max
+
+# View current cgroup of a process
+cat /proc/1234/cgroup

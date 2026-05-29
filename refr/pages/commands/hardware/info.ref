@@ -1,0 +1,79 @@
+---
+title: Hardware Info
+order: 1
+description: Device enumeration and system hardware details
+tags: [hardware, lspci, lsusb, lscpu, dmidecode, hwinfo]
+---
+
+Querying hardware information on Artix/Arch Linux systems.
+
+@code bash
+# CPU information
+lscpu                            # architecture, cores, threads, cache
+lscpu -e                         # extended per-CPU table
+lscpu -J                         # JSON output
+cat /proc/cpuinfo                # raw kernel CPU info
+
+# PCI devices (GPUs, NICs, controllers)
+lspci                            # list all PCI devices
+lspci -v                         # verbose (capabilities, drivers)
+lspci -vv                        # very verbose
+lspci -k                         # show kernel drivers in use
+lspci -nn                        # show vendor/device IDs
+lspci -s 01:00.0 -v             # specific device by slot
+lspci -d 10de: -v               # filter by vendor ID (NVIDIA=10de)
+lspci | grep -i vga              # find graphics card
+lspci | grep -i net              # find network adapters
+
+# USB devices
+lsusb                            # list all USB devices
+lsusb -v                         # verbose
+lsusb -t                         # tree view (hubs and ports)
+lsusb -s 001:003                 # specific bus:device
+lsusb -d 046d:c52b              # filter by vendor:product ID
+
+@text
+dmidecode reads hardware info from SMBIOS/DMI tables (requires root).
+hwinfo provides a comprehensive hardware probe.
+
+@code bash
+# DMI/SMBIOS tables (requires root)
+sudo dmidecode                   # full dump
+sudo dmidecode -t bios           # BIOS info
+sudo dmidecode -t system         # system manufacturer/model/serial
+sudo dmidecode -t baseboard      # motherboard info
+sudo dmidecode -t memory         # RAM slots, size, speed, type
+sudo dmidecode -t processor      # CPU socket details
+sudo dmidecode -t chassis        # case type
+sudo dmidecode -s system-product-name   # single string value
+
+# hwinfo (install: pacman -S hwinfo)
+sudo hwinfo --short              # summary of all hardware
+sudo hwinfo --cpu
+sudo hwinfo --disk
+sudo hwinfo --network
+sudo hwinfo --gfxcard
+sudo hwinfo --sound
+sudo hwinfo --usb
+sudo hwinfo --pci
+
+@text
+Additional hardware info sources from /proc and /sys.
+
+@code bash
+# Block devices
+lsblk                           # block device tree
+lsblk -f                        # filesystems and UUIDs
+lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,MODEL
+
+# Memory
+free -h                          # RAM summary
+cat /proc/meminfo                # detailed memory stats
+
+# Kernel modules (drivers)
+lsmod                           # loaded kernel modules
+modinfo <module>                 # module details
+lspci -k                        # PCI devices with their modules
+
+# All hardware overview
+inxi -Fxz                       # comprehensive summary (install: pacman -S inxi)

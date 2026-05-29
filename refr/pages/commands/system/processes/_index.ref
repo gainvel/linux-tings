@@ -1,0 +1,8 @@
+---
+title: Processes
+order: 5
+description: Process management
+tags: [processes, ps, kill, jobs, scheduling, priority]
+---
+
+Process management — listing, signaling, monitoring, job control, scheduling, and priority adjustment.

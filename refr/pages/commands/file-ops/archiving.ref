@@ -1,0 +1,180 @@
+---
+title: Archiving
+order: 3
+description: Compression and archiving — tar, gzip, bzip2, xz, zstd, zip, 7z
+tags: [files, tar, gzip, bzip2, xz, zstd, zip, 7z, compression, archive]
+---
+
+Tools for creating archives and compressing files. tar handles archiving (bundling files), while gzip/bzip2/xz/zstd handle compression. zip and 7z combine both.
+
+@text
+tar — tape archive. Bundle files into a single archive, optionally compressed.
+
+@code bash
+# Create a tar archive
+tar cf archive.tar file1 file2 dir/
+
+# Create with verbose output
+tar cvf archive.tar dir/
+
+# Create gzip-compressed archive (.tar.gz or .tgz)
+tar czf archive.tar.gz dir/
+
+# Create bzip2-compressed archive (.tar.bz2)
+tar cjf archive.tar.bz2 dir/
+
+# Create xz-compressed archive (.tar.xz) — best ratio, slower
+tar cJf archive.tar.xz dir/
+
+# Create zstd-compressed archive (.tar.zst) — fast with good ratio
+tar --zstd -cf archive.tar.zst dir/
+
+# Extract an archive (auto-detects compression)
+tar xf archive.tar.gz
+
+# Extract to a specific directory
+tar xf archive.tar.gz -C /dest/dir/
+
+# Extract with verbose output
+tar xvf archive.tar.gz
+
+# List contents without extracting
+tar tf archive.tar.gz
+
+# Extract specific files
+tar xf archive.tar.gz path/to/file.txt
+
+# Exclude patterns when creating
+tar czf archive.tar.gz --exclude='*.log' --exclude='.git' dir/
+
+# Exclude from file
+tar czf archive.tar.gz --exclude-from=exclude.txt dir/
+
+# Append files to existing tar (uncompressed only)
+tar rf archive.tar newfile.txt
+
+# Preserve permissions and ownership
+tar czpf archive.tar.gz dir/
+
+# Create archive with absolute paths stripped (default behavior)
+tar czf archive.tar.gz -C /path/to parent_dir/
+
+# Incremental backup with tar
+tar czf backup-$(date +%F).tar.gz --newer-mtime='2024-01-01' dir/
+
+@text
+Individual compression tools — compress/decompress single files or streams.
+
+@code bash
+# gzip — fast, ubiquitous, moderate ratio
+gzip file.txt                    # compresses to file.txt.gz, removes original
+gzip -k file.txt                 # keep original
+gzip -d file.txt.gz              # decompress (or: gunzip file.txt.gz)
+gzip -l file.txt.gz              # show compression info
+gzip -1 file.txt                 # fastest compression
+gzip -9 file.txt                 # best compression
+zcat file.txt.gz                 # view compressed file without extracting
+
+# bzip2 — slower, better ratio than gzip
+bzip2 file.txt                   # compresses to file.txt.bz2
+bzip2 -k file.txt                # keep original
+bzip2 -d file.txt.bz2            # decompress (or: bunzip2)
+bzcat file.txt.bz2               # view without extracting
+
+# xz — best ratio, slowest
+xz file.txt                      # compresses to file.txt.xz
+xz -k file.txt                   # keep original
+xz -d file.txt.xz                # decompress (or: unxz)
+xz -T0 file.txt                  # use all CPU cores
+xz -9 file.txt                   # maximum compression
+xzcat file.txt.xz                # view without extracting
+
+# zstd — excellent ratio with fast speed (best general-purpose)
+zstd file.txt                    # compresses to file.txt.zst
+zstd -k file.txt                 # keep original (default behavior)
+zstd -d file.txt.zst             # decompress (or: unzstd)
+zstd -T0 file.txt                # use all CPU cores
+zstd -19 file.txt                # maximum compression
+zstd --rm file.txt               # remove original after compressing
+zstdcat file.txt.zst             # view without extracting
+
+@text
+zip and unzip — cross-platform archive format.
+
+@code bash
+# Create a zip archive
+zip archive.zip file1 file2
+
+# Zip a directory recursively
+zip -r archive.zip dir/
+
+# Add password protection
+zip -e -r archive.zip dir/
+
+# Exclude patterns
+zip -r archive.zip dir/ -x "*.log" "*.tmp"
+
+# Update existing zip (add new/changed files)
+zip -u archive.zip newfile.txt
+
+# List contents
+unzip -l archive.zip
+
+# Extract
+unzip archive.zip
+
+# Extract to specific directory
+unzip archive.zip -d /dest/dir/
+
+# Extract specific files
+unzip archive.zip path/to/file.txt
+
+# Test archive integrity
+unzip -t archive.zip
+
+# Overwrite without prompting
+unzip -o archive.zip
+
+@text
+7z — high compression ratio, many format support.
+
+@code bash
+# Install p7zip
+sudo pacman -S p7zip
+
+# Create 7z archive
+7z a archive.7z dir/
+
+# Create with maximum compression
+7z a -mx=9 archive.7z dir/
+
+# Create with password and encryption
+7z a -p -mhe=on archive.7z dir/
+
+# Extract
+7z x archive.7z
+
+# Extract to directory
+7z x archive.7z -o/dest/dir/
+
+# List contents
+7z l archive.7z
+
+# Test integrity
+7z t archive.7z
+
+# Extract specific files
+7z x archive.7z file.txt
+
+# Create tar.7z (tar first, then 7z compress)
+tar cf - dir/ | 7z a -si archive.tar.7z
+
+@text
+Compression comparison (typical text file, higher = better):
+
+  Tool     Speed      Ratio     Notes
+  gzip     Fast       Moderate  Universally available
+  bzip2    Slow       Good      Largely superseded by xz/zstd
+  xz       Slowest    Best      Great for distribution archives
+  zstd     Fastest    Good      Best speed/ratio tradeoff
+  7z       Slow       Best      Best for Windows interop

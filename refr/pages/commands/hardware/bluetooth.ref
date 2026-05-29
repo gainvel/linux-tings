@@ -1,0 +1,136 @@
+---
+title: Bluetooth
+order: 4
+description: Bluetooth pairing, trust, connect, and rfkill
+tags: [hardware, bluetooth, bluetoothctl, rfkill, pairing]
+---
+
+Bluetooth management using bluetoothctl (from bluez) on Artix Linux
+with OpenRC.
+
+@code bash
+# Install bluetooth stack
+sudo pacman -S bluez bluez-utils
+
+# Start bluetooth service (OpenRC)
+sudo rc-service bluetoothd start
+sudo rc-update add bluetoothd default    # enable at boot
+
+# Check adapter status
+bluetoothctl show                # adapter info
+bluetoothctl list                # list adapters (if multiple)
+
+@text
+rfkill manages wireless device soft/hard blocks. A soft-blocked
+adapter cannot be used until unblocked.
+
+@code bash
+# List wireless devices
+rfkill list
+rfkill list bluetooth
+
+# Unblock bluetooth
+sudo rfkill unblock bluetooth
+
+# Block bluetooth (disable radio)
+sudo rfkill block bluetooth
+
+# Check if blocked
+rfkill | grep bluetooth
+
+@text
+Interactive pairing with bluetoothctl. The tool provides an interactive
+shell but commands can also be passed directly.
+
+@code bash
+# Enter interactive mode
+bluetoothctl
+
+# --- Inside bluetoothctl shell ---
+
+# Power on the adapter
+power on
+
+# Start scanning for devices
+scan on
+# Wait for your device to appear...
+# [NEW] Device AA:BB:CC:DD:EE:FF My Headphones
+
+# Stop scanning
+scan off
+
+# Pair with a device
+pair AA:BB:CC:DD:EE:FF
+# Confirm PIN if prompted
+
+# Trust device (auto-connect in future)
+trust AA:BB:CC:DD:EE:FF
+
+# Connect
+connect AA:BB:CC:DD:EE:FF
+
+# Disconnect
+disconnect AA:BB:CC:DD:EE:FF
+
+# Remove a paired device
+remove AA:BB:CC:DD:EE:FF
+
+# List known devices
+devices
+devices Paired
+devices Bonded
+
+# Exit
+exit
+
+@text
+Non-interactive one-line commands for scripting.
+
+@code bash
+# Power on
+bluetoothctl power on
+
+# Scan, pair, trust, connect in sequence
+bluetoothctl scan on &
+sleep 10
+bluetoothctl scan off
+bluetoothctl pair AA:BB:CC:DD:EE:FF
+bluetoothctl trust AA:BB:CC:DD:EE:FF
+bluetoothctl connect AA:BB:CC:DD:EE:FF
+
+# Check connection status
+bluetoothctl info AA:BB:CC:DD:EE:FF
+
+# List paired devices
+bluetoothctl devices Paired
+
+@text
+Troubleshooting common bluetooth issues.
+
+@code bash
+# Check if bluetooth service is running
+rc-service bluetoothd status
+
+# Restart bluetooth
+sudo rc-service bluetoothd restart
+
+# Check kernel module
+lsmod | grep btusb
+sudo modprobe btusb              # load if missing
+
+# Debug logs
+sudo btmon                       # live bluetooth monitor
+journalctl -b | grep -i bluetooth   # if using a logger
+
+# Remove and re-pair a problematic device
+bluetoothctl remove AA:BB:CC:DD:EE:FF
+bluetoothctl scan on
+# Then pair/trust/connect again
+
+# Bluetooth configuration
+# /etc/bluetooth/main.conf
+#   [General]
+#   AutoEnable=true              # power on adapter at boot
+#   FastConnectable=true
+#   [Policy]
+#   AutoEnable=true

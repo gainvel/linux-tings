@@ -1,0 +1,105 @@
+---
+title: Kernel Info
+order: 4
+description: uname, /proc/version, /proc/cmdline
+tags: [kernel, uname, proc, version, info]
+---
+
+Commands and files for querying kernel version, architecture, and build information.
+
+@text
+uname — System Information
+
+@code bash
+# Print all system information
+uname -a
+
+# Kernel name
+uname -s          # e.g., Linux
+
+# Kernel release (version string)
+uname -r          # e.g., 6.12.1-artix1-1
+
+# Kernel version (build info)
+uname -v          # e.g., #1 SMP PREEMPT_DYNAMIC ...
+
+# Machine architecture
+uname -m          # e.g., x86_64
+
+# Processor type
+uname -p          # e.g., unknown (often same as -m)
+
+# Hardware platform
+uname -i          # e.g., unknown
+
+# Operating system
+uname -o          # e.g., GNU/Linux
+
+# Hostname
+uname -n          # e.g., artixbox
+
+# Common combo: kernel release + architecture
+uname -rm
+
+@text
+/proc Files
+
+@code bash
+# Full kernel version string
+cat /proc/version
+# e.g., Linux version 6.12.1-artix1-1 (linux@artix) (gcc ...) #1 SMP PREEMPT_DYNAMIC ...
+
+# Boot command line (kernel parameters)
+cat /proc/cmdline
+# e.g., BOOT_IMAGE=/boot/vmlinuz-linux root=/dev/sda2 rw quiet loglevel=3
+
+# CPU information
+cat /proc/cpuinfo
+cat /proc/cpuinfo | grep "model name" | head -1
+cat /proc/cpuinfo | grep "cpu cores" | head -1
+nproc                     # number of processing units
+
+# Memory information
+cat /proc/meminfo
+cat /proc/meminfo | head -3    # MemTotal, MemFree, MemAvailable
+
+# Uptime (seconds)
+cat /proc/uptime
+uptime                    # human-readable
+
+# Load average
+cat /proc/loadavg
+uptime | awk -F'load average:' '{print $2}'
+
+# Kernel config (if available)
+cat /proc/config.gz | gunzip | grep CONFIG_PREEMPT
+# or
+zcat /proc/config.gz | grep CONFIG_HZ
+
+@text
+Other Kernel Information
+
+@code bash
+# Kernel modules directory
+ls /lib/modules/$(uname -r)/
+
+# Installed kernels
+ls /boot/vmlinuz*
+
+# Check if kernel is preemptive
+uname -v | grep -i preempt
+
+# Kernel architecture details
+getconf LONG_BIT          # 32 or 64
+arch                      # same as uname -m
+
+# Check kernel taint flags
+cat /proc/sys/kernel/tainted
+# 0 = untainted, non-zero = tainted (proprietary modules, etc.)
+
+# Kernel build compiler
+cat /proc/version | grep -oP 'gcc.*?\)'
+
+# Distribution-specific kernel package
+pacman -Q linux
+pacman -Q linux-headers

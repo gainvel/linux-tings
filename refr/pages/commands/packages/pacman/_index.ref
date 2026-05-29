@@ -1,0 +1,9 @@
+---
+title: Pacman
+order: 1
+description: Official repository packages
+tags: [pacman, package, arch, artix]
+---
+
+pacman is the package manager for Arch-based distributions including Artix.
+It handles binary packages from official repositories.

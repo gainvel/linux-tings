@@ -1,0 +1,177 @@
+---
+title: Scheduling
+order: 4
+description: crontab, /etc/cron.d, at, batch, anacron
+tags: [cron, crontab, at, batch, anacron, scheduling]
+---
+
+Task scheduling with cron (recurring), at (one-time), and anacron (catch-up for missed jobs).
+
+@text
+crontab — User Cron Jobs
+
+@code bash
+# Edit your crontab
+crontab -e
+
+# List your crontab
+crontab -l
+
+# Remove your crontab (all jobs)
+crontab -r
+
+# Edit another user's crontab (as root)
+sudo crontab -u username -e
+
+# List another user's crontab
+sudo crontab -u username -l
+
+@text
+Crontab Syntax
+
+@code bash
+# Format:
+# MIN HOUR DOM MON DOW  command
+# 0-59 0-23 1-31 1-12 0-7  (0 and 7 = Sunday)
+
+# Every minute
+* * * * *  /path/to/script.sh
+
+# Every 5 minutes
+*/5 * * * *  /path/to/script.sh
+
+# Every hour at minute 0
+0 * * * *  /path/to/script.sh
+
+# Daily at 3:30 AM
+30 3 * * *  /path/to/script.sh
+
+# Weekly on Sunday at midnight
+0 0 * * 0  /path/to/script.sh
+
+# Monthly on the 1st at 6 AM
+0 6 1 * *  /path/to/script.sh
+
+# Weekdays at 8 AM
+0 8 * * 1-5  /path/to/script.sh
+
+# Every 15 minutes during work hours
+*/15 9-17 * * 1-5  /path/to/script.sh
+
+# Multiple specific times
+0 8,12,17 * * *  /path/to/script.sh
+
+# Special strings:
+# @reboot    — run once at startup
+# @yearly    — 0 0 1 1 *
+# @monthly   — 0 0 1 * *
+# @weekly    — 0 0 * * 0
+# @daily     — 0 0 * * *
+# @hourly    — 0 * * * *
+
+@reboot  /path/to/startup-script.sh
+
+@text
+Environment and Output
+
+@code bash
+# Set environment in crontab (put at top)
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+MAILTO=user@example.com
+
+# Redirect output (suppress mail)
+0 3 * * * /path/to/script.sh > /dev/null 2>&1
+
+# Log output to a file
+0 3 * * * /path/to/script.sh >> /var/log/myjob.log 2>&1
+
+# Cron runs with minimal environment — always use full paths
+0 3 * * * /usr/bin/python3 /home/user/scripts/backup.py
+
+@text
+System Cron — /etc/cron.d/ and /etc/cron.*
+
+@code bash
+# System-wide cron jobs (include user field)
+# /etc/cron.d/backup
+# MIN HOUR DOM MON DOW USER command
+0 3 * * * root /usr/local/bin/backup.sh
+
+# Predefined directories (run by anacron or cron):
+# /etc/cron.hourly/   — scripts run every hour
+# /etc/cron.daily/    — scripts run daily
+# /etc/cron.weekly/   — scripts run weekly
+# /etc/cron.monthly/  — scripts run monthly
+
+# Scripts in these directories must be executable
+# They don't use crontab syntax — they're just scripts
+sudo chmod +x /etc/cron.daily/myscript
+
+# Common cron daemons on Artix:
+sudo pacman -S cronie    # most common
+sudo rc-update add cronie default
+sudo rc-service cronie start
+
+@text
+at — One-Time Scheduling
+
+@code bash
+# Install at
+sudo pacman -S at
+sudo rc-update add atd default
+sudo rc-service atd start
+
+# Schedule a job for a specific time
+echo "/path/to/script.sh" | at 3:00 PM
+
+# Schedule relative to now
+echo "backup.sh" | at now + 2 hours
+echo "cleanup.sh" | at now + 30 minutes
+echo "report.sh" | at midnight
+echo "update.sh" | at noon tomorrow
+
+# Interactive mode (type commands, Ctrl+D to finish)
+at 10:00 AM Friday
+> /path/to/script.sh
+> echo "done" | mail user
+> [Ctrl+D]
+
+# List pending jobs
+atq
+
+# View a job's commands
+at -c 5     # job number 5
+
+# Remove a pending job
+atrm 5
+
+@text
+batch — Run When Load is Low
+
+@code bash
+# batch runs commands when system load drops below 0.8 (configurable)
+echo "/path/to/heavy-script.sh" | batch
+
+# Equivalent to: at -b
+# Uses the same queue as at
+
+@text
+anacron — Catch-Up Scheduling
+
+For machines that aren't running 24/7. Runs missed daily/weekly/monthly jobs.
+
+@code bash
+# Config: /etc/anacrontab
+# period  delay  identifier  command
+# 1       5      cron.daily    run-parts /etc/cron.daily
+# 7       10     cron.weekly   run-parts /etc/cron.weekly
+# 30      15     cron.monthly  run-parts /etc/cron.monthly
+
+# Run anacron manually (check for missed jobs)
+sudo anacron -f     # force, ignore timestamps
+sudo anacron -n     # run now, don't wait for delay
+sudo anacron -d     # debug mode
+
+# Timestamps stored in /var/spool/anacron/
+cat /var/spool/anacron/cron.daily

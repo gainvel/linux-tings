@@ -1,0 +1,117 @@
+---
+title: Power
+order: 3
+description: Battery, power management, suspend, and hibernate
+tags: [hardware, acpi, upower, tlp, powertop, suspend, hibernate, power]
+---
+
+Power management tools for laptops and desktops on Artix Linux
+(OpenRC-based, no systemd).
+
+@code bash
+# ACPI battery and AC adapter status
+acpi                             # battery status summary
+acpi -b                          # battery info
+acpi -a                          # AC adapter status
+acpi -t                          # thermal zone temperatures
+acpi -V                          # all ACPI information
+acpi -i                          # battery design capacity and health
+
+@text
+UPower provides a D-Bus interface for power device enumeration.
+
+@code bash
+# Install upower
+sudo pacman -S upower
+
+# List power devices
+upower -e                        # enumerate devices
+upower -i /org/freedesktop/UPower/devices/battery_BAT0
+upower -d                        # dump all device info
+
+# Monitor power events
+upower --monitor                 # watch for changes in real time
+
+@text
+TLP is an advanced power management tool that applies optimal settings
+automatically. On Artix, use the OpenRC service.
+
+@code bash
+# Install TLP
+sudo pacman -S tlp
+sudo rc-update add tlp default   # enable at boot (OpenRC)
+sudo rc-service tlp start        # start now
+
+# Check current status
+sudo tlp-stat                    # full status report
+sudo tlp-stat -s                 # system info
+sudo tlp-stat -b                 # battery info
+sudo tlp-stat -d                 # disk info
+sudo tlp-stat -p                 # PCI device power state
+sudo tlp-stat -u                 # USB device info
+sudo tlp-stat -t                 # temperatures
+
+# Manual mode switching
+sudo tlp bat                     # force battery mode
+sudo tlp ac                      # force AC mode
+sudo tlp start                   # apply auto settings
+
+# Configuration: /etc/tlp.conf
+# Key settings:
+#   CPU_SCALING_GOVERNOR_ON_AC=performance
+#   CPU_SCALING_GOVERNOR_ON_BAT=powersave
+#   RUNTIME_PM_ON_BAT=auto
+#   USB_AUTOSUSPEND=1
+
+@text
+powertop shows power consumption by process and device. Use it to
+identify power-hungry processes and tune settings.
+
+@code bash
+# Install powertop
+sudo pacman -S powertop
+
+# Interactive power monitor (requires root)
+sudo powertop
+
+# Tabs: Overview, Idle Stats, Frequency Stats, Device Stats, Tunables
+# In Tunables tab, press Enter to toggle Good/Bad
+
+# Generate HTML report
+sudo powertop --html=power-report.html
+
+# Auto-tune all settings (one-shot)
+sudo powertop --auto-tune
+
+# Calibrate (run on battery, takes several minutes)
+sudo powertop --calibrate
+
+@text
+Suspend and hibernate on Artix with OpenRC. These use kernel interfaces
+directly or through elogind.
+
+@code bash
+# Suspend to RAM (sleep)
+loginctl suspend                 # via elogind
+echo mem | sudo tee /sys/power/state   # direct kernel interface
+
+# Hibernate (suspend to disk, requires swap >= RAM)
+loginctl hibernate               # via elogind
+echo disk | sudo tee /sys/power/state  # direct kernel interface
+
+# Hybrid sleep (suspend + hibernate image)
+loginctl hybrid-sleep
+
+# Check available sleep states
+cat /sys/power/state             # mem disk standby freeze
+cat /sys/power/mem_sleep         # s2idle [deep]  (deep = S3)
+
+# Set deep sleep (S3) instead of s2idle
+echo deep | sudo tee /sys/power/mem_sleep
+
+# elogind handles lid close, power button, etc.
+# Config: /etc/elogind/logind.conf
+#   HandleLidSwitch=suspend
+#   HandlePowerKey=poweroff
+#   IdleAction=suspend
+#   IdleActionSec=30min

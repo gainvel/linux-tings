@@ -1,0 +1,152 @@
+---
+title: SSH Tunnels
+order: 4
+description: -L local, -R remote, -D SOCKS, -J jump host, ProxyJump
+tags: [ssh, tunnel, forward, proxy, socks, jump, bastion, port]
+---
+
+SSH tunnels encrypt traffic through an SSH connection. Local forwards
+bring remote services to your machine; remote forwards expose local
+services to the remote network; dynamic forwards create a SOCKS proxy.
+
+@code bash
+# ---- Local forward (-L): access remote service locally ----
+# Syntax: -L [bind_addr:]local_port:target_host:target_port
+
+# forward local:8080 -> remote_server:80 (through SSH host)
+ssh -L 8080:localhost:80 user@sshhost
+# now http://localhost:8080 reaches port 80 on sshhost
+
+# access a service on the remote network
+ssh -L 3306:dbserver:3306 user@sshhost
+# now localhost:3306 reaches dbserver:3306 via sshhost
+
+# bind to all interfaces (not just localhost)
+ssh -L 0.0.0.0:8080:localhost:80 user@sshhost
+
+# multiple forwards
+ssh -L 8080:web:80 -L 3306:db:3306 user@sshhost
+
+# background tunnel (no shell)
+ssh -fNL 8080:localhost:80 user@sshhost
+# -f  fork to background
+# -N  no remote command
+
+@code bash
+# ---- Remote forward (-R): expose local service to remote ----
+# Syntax: -R [bind_addr:]remote_port:target_host:target_port
+
+# expose local web server on remote host
+ssh -R 8080:localhost:3000 user@sshhost
+# now sshhost:8080 reaches your localhost:3000
+
+# expose to all interfaces on remote (requires GatewayPorts yes in sshd_config)
+ssh -R 0.0.0.0:8080:localhost:3000 user@sshhost
+
+# background
+ssh -fNR 8080:localhost:3000 user@sshhost
+
+@code bash
+# ---- Dynamic forward (-D): SOCKS proxy ----
+# Syntax: -D [bind_addr:]port
+
+# create SOCKS5 proxy on local port 1080
+ssh -D 1080 user@sshhost
+
+# background SOCKS proxy
+ssh -fND 1080 user@sshhost
+
+# use with curl
+curl --socks5 localhost:1080 https://example.com
+
+# use with firefox: set SOCKS5 proxy to localhost:1080
+# also set network.proxy.socks_remote_dns = true in about:config
+
+# use with proxychains
+# edit /etc/proxychains.conf: socks5 127.0.0.1 1080
+proxychains curl https://example.com
+
+@code bash
+# ---- Jump hosts (-J / ProxyJump) ----
+
+# connect through a bastion/jump host
+ssh -J jumpuser@bastion user@internal
+
+# multiple jumps (chained)
+ssh -J jump1@bastion1,jump2@bastion2 user@internal
+
+# with custom port on jump host
+ssh -J jumpuser@bastion:2222 user@internal
+
+# legacy method (ProxyCommand)
+ssh -o ProxyCommand="ssh -W %h:%p jumpuser@bastion" user@internal
+
+@text
+ProxyJump in ~/.ssh/config is the cleanest approach for persistent
+jump host configurations:
+
+@code bash
+# ~/.ssh/config
+
+Host bastion
+    HostName bastion.example.com
+    User jumpuser
+    Port 2222
+    IdentityFile ~/.ssh/id_bastion
+
+Host internal-*
+    ProxyJump bastion
+    User admin
+    IdentityFile ~/.ssh/id_internal
+
+Host internal-web
+    HostName 10.0.0.10
+
+Host internal-db
+    HostName 10.0.0.20
+
+# now just: ssh internal-web
+# or: ssh internal-db
+
+@code bash
+# ---- tunnel management ----
+
+# check if tunnel port is in use
+ss -tlnp | grep 8080
+
+# find and kill background tunnel
+ps aux | grep 'ssh.*-[fN]'
+kill <pid>
+
+# autossh: persistent tunnel with auto-reconnect
+# install: pacman -S autossh
+autossh -M 0 -fNL 8080:localhost:80 user@sshhost
+# -M 0 disables autossh monitoring port, uses SSH keepalive instead
+
+# with keepalive (recommended with autossh -M 0)
+autossh -M 0 -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" \
+  -fNL 8080:localhost:80 user@sshhost
+
+@text
+Quick reference:
+
+- `-L local:remote` -- bring remote to local (I want to access their stuff)
+- `-R remote:local` -- push local to remote (they want to access my stuff)
+- `-D port` -- SOCKS proxy (route all traffic through remote)
+- `-J host` -- bounce through a jump host
+
+Tunnel flags often combined with:
+- `-f` -- fork to background after authentication
+- `-N` -- no remote command (tunnel only)
+- `-g` -- allow other hosts to use the forwarded port
+
+@code bash
+# ---- on-the-fly forwarding in active session ----
+
+# press Enter then ~C to open SSH command line:
+# ssh> -L 9090:localhost:9090     # add local forward
+# ssh> -R 8080:localhost:80       # add remote forward
+# ssh> -D 1080                    # add dynamic forward
+# ssh> -KL 9090                   # cancel local forward on 9090
+# ssh> -KR 8080                   # cancel remote forward on 8080
+# ssh> -KD 1080                   # cancel dynamic forward

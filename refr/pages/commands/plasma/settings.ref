@@ -1,0 +1,145 @@
+---
+title: Settings & D-Bus
+order: 3
+description: kwriteconfig5/6, systemsettings, qdbus, dbus-send
+tags: [plasma, settings, dbus, kwriteconfig, qdbus, configuration]
+---
+
+Plasma settings can be managed via GUI (systemsettings), CLI (kwriteconfig), or D-Bus (qdbus/dbus-send).
+
+@text
+kwriteconfig5 / kwriteconfig6
+
+Read and write KDE configuration files (INI-style rc files in ~/.config/).
+
+@code bash
+# Write a config value
+kwriteconfig5 --file kdeglobals --group General --key ColorScheme "BreezeDark"
+
+# Read a config value
+kreadconfig5 --file kdeglobals --group General --key ColorScheme
+
+# Delete a config key
+kwriteconfig5 --file kdeglobals --group General --key SomeKey --delete
+
+# Write to a specific absolute path
+kwriteconfig5 --file /home/user/.config/kwinrc --group Compositing --key Backend OpenGL
+
+# Plasma 6 equivalents
+kwriteconfig6 --file kdeglobals --group General --key ColorScheme "BreezeDark"
+kreadconfig6 --file kdeglobals --group General --key ColorScheme
+
+# Common config files:
+# kdeglobals        Global KDE settings (fonts, colors, toolbar style)
+# kwinrc            KWin window manager settings
+# plasmarc          Plasma shell settings
+# kglobalshortcutsrc  Global keyboard shortcuts
+# plasma-org.kde.plasma.desktop-appletsrc  Desktop/panel widget layout
+# kcminputrc        Mouse/touchpad settings
+# ksmserverrc       Session management settings
+
+@text
+System Settings GUI
+
+@code bash
+# Open the full system settings application
+systemsettings5
+# Plasma 6
+systemsettings
+
+# Open a specific settings module directly
+kcmshell5 kcm_colors          # Colors
+kcmshell5 kcm_fonts           # Fonts
+kcmshell5 kcm_kwinrules       # Window rules
+kcmshell5 kcm_keys            # Keyboard shortcuts
+kcmshell5 kcm_lookandfeel     # Global theme
+kcmshell5 kcm_desktoptheme    # Plasma style
+kcmshell5 kcm_icons           # Icon theme
+kcmshell5 kcm_cursortheme     # Cursor theme
+kcmshell5 kcm_autostart       # Autostart
+
+# List all available KCM modules
+kcmshell5 --list
+# Plasma 6
+kcmshell6 --list
+
+@text
+qdbus — Qt D-Bus Tool
+
+qdbus is the Qt-native D-Bus query tool, simpler than dbus-send for KDE services.
+
+@code bash
+# List all available D-Bus services
+qdbus
+
+# List objects on a service
+qdbus org.kde.KWin
+
+# List methods on an object
+qdbus org.kde.KWin /KWin
+
+# Call a method
+qdbus org.kde.KWin /KWin reconfigure
+
+# Call a method with arguments
+qdbus org.kde.KWin /KWin setCurrentDesktop 2
+
+# Read a D-Bus property
+qdbus org.kde.KWin /KWin org.kde.KWin.currentDesktop
+
+# Common Plasma D-Bus services:
+# org.kde.KWin              Window manager
+# org.kde.plasmashell        Plasma shell
+# org.kde.kglobalaccel       Global shortcuts
+# org.kde.ActivityManager    Activities
+# org.kde.StatusNotifierWatcher  System tray
+# org.kde.kded5              KDE daemon
+# org.freedesktop.PowerManagement  Power management
+
+@text
+dbus-send — Generic D-Bus Tool
+
+Lower-level than qdbus, works without Qt. Use for scripts that shouldn't depend on Qt.
+
+@code bash
+# Send a D-Bus message (method call)
+dbus-send --session --print-reply \
+  --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure
+
+# Call with arguments (note type prefixes)
+dbus-send --session --print-reply \
+  --dest=org.kde.KWin /KWin org.kde.KWin.setCurrentDesktop int32:3
+
+# Get a property
+dbus-send --session --print-reply \
+  --dest=org.kde.KWin /KWin \
+  org.freedesktop.DBus.Properties.Get \
+  string:"org.kde.KWin" string:"currentDesktop"
+
+# Monitor all D-Bus traffic (useful for discovering signals)
+dbus-monitor --session
+
+# Monitor a specific interface
+dbus-monitor --session "interface='org.kde.KWin'"
+
+@text
+Applying Settings Changes
+
+Many KDE settings require a reconfigure signal to take effect after editing rc files.
+
+@code bash
+# Reconfigure KWin (window manager settings)
+qdbus org.kde.KWin /KWin reconfigure
+
+# Reload Plasma shell (plasmashell settings)
+qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.refreshCurrentShell
+
+# Reload global shortcuts
+# Editing kglobalshortcutsrc requires kglobalaccel to notice:
+kquitapp5 kglobalaccel && sleep 1 && kglobalaccel5 &
+
+# Reload KDE daemon modules
+qdbus org.kde.kded5 /kded reconfigure
+
+# Force full Plasma reload (nuclear option)
+kquitapp5 plasmashell && kstart5 plasmashell &

@@ -1,0 +1,148 @@
+---
+title: KWin Window Manager
+order: 2
+description: KWin (X11/Wayland), window rules, shortcuts, compositing
+tags: [kwin, window-manager, compositing, shortcuts, wayland, x11]
+---
+
+KWin is Plasma's window manager and compositor, available as kwin_x11 or kwin_wayland.
+
+@text
+KWin Process Management
+
+@code bash
+# Check which KWin is running
+pgrep -a kwin
+
+# Restart KWin (X11) — replaces running instance
+kwin_x11 --replace &disown
+
+# Restart KWin (Wayland) — replaces running instance
+kwin_wayland --replace &disown
+
+# Reconfigure KWin without restart (reload settings)
+qdbus org.kde.KWin /KWin reconfigure
+
+@text
+Compositing
+
+Toggle and configure the compositor for effects, transparency, and vsync.
+
+@code bash
+# Check if compositing is active
+qdbus org.kde.KWin /Compositor org.kde.kwin.Compositing.active
+
+# Toggle compositing on/off
+qdbus org.kde.KWin /Compositor suspend
+qdbus org.kde.KWin /Compositor resume
+
+# Keyboard shortcut: Alt+Shift+F12 toggles compositing by default
+
+# Set compositing backend via config
+kwriteconfig5 --file kwinrc --group Compositing --key Backend OpenGL
+kwriteconfig5 --file kwinrc --group Compositing --key GLCore true
+
+# Disable animations
+kwriteconfig5 --file kwinrc --group Plugins --key kwin4_effect_fadeEnabled false
+kwriteconfig5 --file kwinrc --group Plugins --key slidingpopupsEnabled false
+
+# Force full recomposite pipeline
+kwriteconfig5 --file kwinrc --group Compositing --key GLPreferBufferSwap a
+
+@text
+Window Rules
+
+Window rules let you override behavior for specific applications (size, position, desktop, etc.).
+
+@code bash
+# Window rules are stored in ~/.config/kwinrulesrc
+# Open the window rules editor
+kcmshell5 kcm_kwinrules
+# Plasma 6
+kcmshell6 kcm_kwinrules
+
+# Get window class for rule matching (click on target window)
+xprop WM_CLASS
+
+# Wayland alternative — use xprop substitute
+xdotool getactivewindow getwindowname
+
+# Example kwinrulesrc entry (added manually or via GUI):
+# [1]
+# Description=Float Dolphin
+# wmclass=dolphin
+# wmclassmatch=1
+# above=true
+# aboverule=2
+# types=1
+
+# Apply rules without restart
+qdbus org.kde.KWin /KWin reconfigure
+
+@text
+Keyboard Shortcuts
+
+KWin shortcuts are stored in kglobalshortcutsrc and managed via D-Bus or the settings UI.
+
+@code bash
+# List all KWin global shortcuts
+qdbus org.kde.kglobalaccel /component/kwin shortcutNames
+
+# View a specific shortcut action
+qdbus org.kde.kglobalaccel /component/kwin shortcut "Window Maximize"
+
+# Open the keyboard shortcut settings module
+kcmshell5 keys
+# Plasma 6
+kcmshell6 kcm_keys
+
+# Useful default KWin shortcuts:
+# Meta+Up           Maximize window
+# Meta+Down         Minimize/restore
+# Meta+Left/Right   Tile left/right
+# Meta+PgUp/PgDn    Switch virtual desktop
+# Alt+Tab           Window switcher
+# Alt+F4            Close window
+# Meta+D            Show desktop
+# Ctrl+F8           Desktop grid (overview)
+# Ctrl+F9           Present windows (all)
+# Ctrl+F10          Present windows (current desktop)
+
+@text
+Window Operations via D-Bus
+
+@code bash
+# Get active window caption
+qdbus org.kde.KWin /KWin org.kde.KWin.activeWindow
+
+# List supported effects
+qdbus org.kde.KWin /Effects org.kde.kwin.Effects.listOfEffects
+
+# Check if a specific effect is loaded
+qdbus org.kde.KWin /Effects org.kde.kwin.Effects.isEffectLoaded "slide"
+
+# Load/unload an effect
+qdbus org.kde.KWin /Effects org.kde.kwin.Effects.loadEffect "wobblywindows"
+qdbus org.kde.KWin /Effects org.kde.kwin.Effects.unloadEffect "wobblywindows"
+
+@text
+KWin Scripting
+
+KWin has a JavaScript scripting interface for window management automation.
+
+@code bash
+# Scripts stored in ~/.local/share/kwin/scripts/
+# Install a KWin script
+plasmapkg2 -t kwinscript -i /path/to/script.kwinscript
+
+# List installed KWin scripts
+plasmapkg2 -t kwinscript -l
+
+# Enable/disable a KWin script via config
+kwriteconfig5 --file kwinrc --group Plugins --key myscriptEnabled true
+qdbus org.kde.KWin /KWin reconfigure
+
+# Run a script once for testing
+dbus-send --session --dest=org.kde.KWin \
+  /Scripting org.kde.kwin.Scripting.loadScript \
+  string:"/path/to/script.js" string:"test"

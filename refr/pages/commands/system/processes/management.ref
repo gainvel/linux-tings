@@ -1,0 +1,190 @@
+---
+title: Process Management
+order: 1
+description: ps, kill, killall, pkill, pgrep, pidof, signal list
+tags: [ps, kill, killall, pkill, pgrep, pidof, signals]
+---
+
+Core process listing and signaling tools.
+
+@text
+ps — Process Listing
+
+@code bash
+# List all processes (BSD syntax)
+ps aux
+
+# List all processes (POSIX syntax)
+ps -ef
+
+# List with full format including PPID
+ps -ef --forest
+
+# Show process tree
+ps auxf
+pstree
+pstree -p          # show PIDs
+pstree -u          # show user transitions
+
+# Show specific columns
+ps -eo pid,ppid,user,%cpu,%mem,stat,start,time,comm
+
+# Sort by CPU usage (descending)
+ps aux --sort=-%cpu | head -20
+
+# Sort by memory usage
+ps aux --sort=-%mem | head -20
+
+# Show processes for a specific user
+ps -u username
+
+# Show a specific process by PID
+ps -p 1234
+
+# Show threads
+ps -eLf
+ps -T -p 1234     # threads of a specific process
+
+# Watch processes in real time
+watch -n 1 'ps aux --sort=-%cpu | head -20'
+
+@text
+pgrep — Find Processes by Name
+
+@code bash
+# Find PID by process name
+pgrep firefox
+pgrep -f "python script.py"    # match full command line
+
+# List matching PIDs and names
+pgrep -l firefox
+
+# Show full command line
+pgrep -la firefox
+
+# Match by user
+pgrep -u root sshd
+
+# Count matching processes
+pgrep -c firefox
+
+# Newest/oldest matching process
+pgrep --newest firefox
+pgrep --oldest firefox
+
+# Inverse match (processes NOT matching)
+pgrep -v -u root
+
+@text
+pidof — Get PID by Exact Name
+
+@code bash
+# Get PID of a running program (exact binary name match)
+pidof firefox
+pidof sshd
+
+# Return only one PID (first match)
+pidof -s firefox
+
+@text
+kill — Send Signals
+
+@code bash
+# Send SIGTERM (graceful shutdown, signal 15)
+kill 1234
+kill -TERM 1234
+kill -15 1234
+
+# Send SIGKILL (force kill, signal 9)
+kill -9 1234
+kill -KILL 1234
+
+# Send SIGHUP (reload configuration)
+kill -HUP 1234
+kill -1 1234
+
+# Send SIGSTOP (pause/freeze process)
+kill -STOP 1234
+kill -19 1234
+
+# Send SIGCONT (resume paused process)
+kill -CONT 1234
+kill -18 1234
+
+# Send SIGUSR1/SIGUSR2 (application-defined)
+kill -USR1 1234
+kill -USR2 1234
+
+# Send signal to a process group
+kill -TERM -1234     # negative PID = process group
+
+@text
+killall — Kill by Name
+
+@code bash
+# Kill all processes with a given name
+killall firefox
+
+# Send specific signal
+killall -HUP nginx
+killall -9 runaway_process
+
+# Interactive: confirm each kill
+killall -i firefox
+
+# Kill only processes owned by a specific user
+killall -u username firefox
+
+# Wait for processes to die
+killall -w firefox
+
+# Dry run (show what would be killed)
+killall -s 0 firefox
+
+@text
+pkill — Kill by Pattern
+
+@code bash
+# Kill by process name pattern
+pkill firefox
+
+# Kill by full command line match
+pkill -f "python script.py"
+
+# Send specific signal
+pkill -HUP nginx
+pkill -9 runaway
+
+# Kill processes owned by a user
+pkill -u username
+
+# Kill newest matching process
+pkill --newest firefox
+
+# Kill processes older than a time
+pkill --older-than 1h firefox
+
+@text
+Signal Reference
+
+@code bash
+# List all signals
+kill -l
+
+# Common signals:
+# 1  SIGHUP    — hangup / reload config
+# 2  SIGINT    — interrupt (Ctrl+C)
+# 3  SIGQUIT   — quit with core dump (Ctrl+\)
+# 9  SIGKILL   — force kill (cannot be caught)
+# 15 SIGTERM   — graceful termination (default)
+# 17 SIGCHLD   — child process exited
+# 18 SIGCONT   — continue stopped process
+# 19 SIGSTOP   — stop process (cannot be caught)
+# 20 SIGTSTP   — terminal stop (Ctrl+Z)
+# 10 SIGUSR1   — user-defined signal 1
+# 12 SIGUSR2   — user-defined signal 2
+
+# Signal handling order: try SIGTERM first, then SIGKILL as last resort
+kill 1234           # SIGTERM — give process a chance to clean up
+sleep 5
+kill -9 1234        # SIGKILL — only if SIGTERM didn't work

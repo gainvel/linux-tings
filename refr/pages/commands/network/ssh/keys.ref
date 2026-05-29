@@ -1,0 +1,121 @@
+---
+title: SSH Keys
+order: 2
+description: ssh-keygen, ssh-agent, ssh-add, authorized_keys
+tags: [ssh, keys, keygen, agent, ed25519, rsa, authorized_keys]
+---
+
+Key-based authentication is more secure than passwords. Ed25519 is the
+recommended algorithm; RSA (4096-bit) is the fallback for legacy systems.
+
+@code bash
+# ---- ssh-keygen: generate keys ----
+
+# ed25519 (recommended)
+ssh-keygen -t ed25519 -C "user@hostname"
+ssh-keygen -t ed25519 -C "user@hostname" -f ~/.ssh/id_myproject
+
+# rsa (legacy compatibility)
+ssh-keygen -t rsa -b 4096 -C "user@hostname"
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_legacy
+
+# ecdsa (alternative)
+ssh-keygen -t ecdsa -b 521 -C "user@hostname"
+
+# generate without passphrase (automation only)
+ssh-keygen -t ed25519 -f ~/.ssh/id_automation -N ""
+
+@code bash
+# key management
+ssh-keygen -p -f ~/.ssh/id_ed25519        # change passphrase
+ssh-keygen -y -f ~/.ssh/id_ed25519        # print public key from private
+ssh-keygen -l -f ~/.ssh/id_ed25519.pub    # show fingerprint
+ssh-keygen -l -E md5 -f ~/.ssh/id_ed25519.pub    # MD5 fingerprint
+ssh-keygen -lv -f ~/.ssh/id_ed25519.pub   # visual fingerprint (randomart)
+
+@code bash
+# ---- deploy public key to remote host ----
+
+# preferred method
+ssh-copy-id user@hostname
+ssh-copy-id -i ~/.ssh/id_mykey.pub user@hostname       # specific key
+ssh-copy-id -p 2222 user@hostname                       # custom port
+
+# manual method
+cat ~/.ssh/id_ed25519.pub | ssh user@hostname 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'
+
+@text
+authorized_keys format: one key per line. Each line can include options
+to restrict what the key can do.
+
+@code bash
+# ---- ~/.ssh/authorized_keys ----
+
+# basic entry (just the public key)
+ssh-ed25519 AAAA...key... user@hostname
+
+# with restrictions
+command="/usr/bin/backup-script" ssh-ed25519 AAAA...    # force specific command
+no-port-forwarding ssh-ed25519 AAAA...                   # disable port forwarding
+no-pty ssh-ed25519 AAAA...                               # disable terminal
+from="192.168.1.0/24" ssh-ed25519 AAAA...               # restrict source IP
+
+# combined restrictions
+from="10.0.0.*",no-port-forwarding,no-X11-forwarding,command="/usr/local/bin/backup" ssh-ed25519 AAAA...
+
+@code bash
+# ---- ssh-agent: key caching ----
+
+# start agent (if not already running)
+eval $(ssh-agent)
+
+# or add to ~/.bashrc for persistent agent
+if [ -z "$SSH_AUTH_SOCK" ]; then
+    eval $(ssh-agent) > /dev/null
+fi
+
+# KDE Plasma / desktop environments often run an agent automatically
+# check with:
+echo $SSH_AUTH_SOCK
+ssh-add -l                                # list loaded keys
+
+@code bash
+# ---- ssh-add: manage agent keys ----
+
+ssh-add                                   # add default key (~/.ssh/id_*)
+ssh-add ~/.ssh/id_myproject               # add specific key
+ssh-add -l                                # list loaded keys (fingerprints)
+ssh-add -L                                # list loaded keys (full public keys)
+ssh-add -d ~/.ssh/id_myproject            # remove specific key
+ssh-add -D                                # remove all keys
+ssh-add -t 3600 ~/.ssh/id_ed25519        # add with 1-hour lifetime
+
+@text
+Agent forwarding lets you use your local keys on a remote machine to
+connect to a third machine. Use with caution: a compromised remote host
+can use your agent while you are connected.
+
+@code bash
+# agent forwarding
+ssh -A user@bastion                       # forward agent to bastion
+# then from bastion:
+ssh user@internal                         # uses forwarded key
+
+# in ~/.ssh/config
+Host bastion
+    ForwardAgent yes
+
+@text
+File permissions matter. SSH refuses to use keys with permissive access:
+
+@code bash
+# required permissions
+chmod 700 ~/.ssh                          # directory
+chmod 600 ~/.ssh/id_ed25519              # private key
+chmod 644 ~/.ssh/id_ed25519.pub          # public key
+chmod 600 ~/.ssh/authorized_keys         # authorized keys
+chmod 600 ~/.ssh/config                  # config file
+chmod 644 ~/.ssh/known_hosts             # known hosts
+
+# check and fix
+ls -la ~/.ssh/

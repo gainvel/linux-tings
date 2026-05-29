@@ -1,0 +1,163 @@
+---
+title: Pacman Hooks
+order: 9
+description: alpm hooks, /etc/pacman.d/hooks
+tags: [pacman, hooks, alpm, trigger, transaction]
+---
+
+ALPM hooks let you run scripts automatically before or after pacman
+transactions. Useful for cache cleanup, rebuilds, notifications, and
+custom post-install actions.
+
+@code bash
+# ---- hook locations ----
+
+# system hooks (from packages, do not edit)
+/usr/share/libalpm/hooks/
+
+# user hooks (create your own here)
+/etc/pacman.d/hooks/
+
+# set in /etc/pacman.conf:
+# HookDir = /etc/pacman.d/hooks/
+
+# create the directory if it doesn't exist
+mkdir -p /etc/pacman.d/hooks
+
+@text
+Hook file format: INI-style with a [Trigger] and [Action] section.
+Files must have the .hook extension.
+
+@code bash
+# ---- hook anatomy ----
+
+# /etc/pacman.d/hooks/example.hook
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Running custom hook...
+When = PostTransaction
+Exec = /usr/local/bin/my-script.sh
+
+@text
+Trigger fields:
+
+- `Operation`: Install, Upgrade, Remove (can specify multiple)
+- `Type`: Package or File
+- `Target`: package name, file path, or glob pattern
+  - `*` matches all packages
+  - `linux` matches only the linux package
+  - `usr/lib/*.so` matches shared library files
+
+Action fields:
+
+- `Description`: shown during transaction
+- `When`: PreTransaction or PostTransaction
+- `Exec`: command to run
+- `Depends`: packages the hook needs to run
+- `AbortOnFail`: if set, abort transaction on hook failure (PreTransaction only)
+- `NeedsTargets`: if set, matching targets are passed via stdin
+
+@code bash
+# ---- practical hook examples ----
+
+# 1. Clean package cache after upgrades
+# /etc/pacman.d/hooks/clean_cache.hook
+[Trigger]
+Operation = Upgrade
+Operation = Install
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Cleaning pacman cache (keeping last 2)...
+When = PostTransaction
+Exec = /usr/bin/paccache -rk 2
+Depends = pacman-contrib
+
+@code bash
+# 2. Update pkgfile database after sync
+# /etc/pacman.d/hooks/pkgfile_update.hook
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = *
+
+[Action]
+Description = Updating pkgfile database...
+When = PostTransaction
+Exec = /usr/bin/pkgfile --update
+Depends = pkgfile
+
+@code bash
+# 3. Rebuild bat cache when syntax files change
+# /etc/pacman.d/hooks/bat_cache.hook
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = File
+Target = usr/share/bat/syntaxes/*
+
+[Action]
+Description = Rebuilding bat syntax cache...
+When = PostTransaction
+Exec = /usr/bin/bat cache --build
+Depends = bat
+
+@code bash
+# 4. Warn about .pacnew files
+# /etc/pacman.d/hooks/pacnew_warn.hook
+[Trigger]
+Operation = Upgrade
+Type = Package
+Target = *
+
+[Action]
+Description = Checking for .pacnew files...
+When = PostTransaction
+Exec = /usr/bin/find /etc -name "*.pacnew" -newer /etc/pacman.d/hooks/pacnew_warn.hook -print
+
+@code bash
+# 5. Rebuild initramfs after kernel/microcode updates
+# /etc/pacman.d/hooks/initramfs.hook
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = linux
+Target = linux-lts
+Target = amd-ucode
+Target = intel-ucode
+
+[Action]
+Description = Rebuilding initramfs...
+When = PostTransaction
+Exec = /usr/bin/mkinitcpio -P
+
+@code bash
+# ---- list active hooks ----
+
+ls /usr/share/libalpm/hooks/              # system hooks
+ls /etc/pacman.d/hooks/                   # user hooks
+
+# see what hooks ran during last transaction
+grep -i "hook" /var/log/pacman.log | tail -20
+
+@text
+Notes:
+- User hooks in /etc/pacman.d/hooks/ override system hooks with the same
+  filename.
+- Hooks run in alphabetical order by filename. Prefix with numbers
+  (01-clean.hook, 02-rebuild.hook) to control order.
+- PreTransaction hooks with AbortOnFail can prevent package operations.
+- The Exec command runs as root. Ensure scripts are secure and not
+  world-writable.

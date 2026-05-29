@@ -1,0 +1,121 @@
+---
+title: Log Files
+order: 3
+description: Key log paths — auth, daemon, kern, cron, Xorg
+tags: [logs, log-files, var-log, auth, kern, xorg]
+---
+
+Key log file locations on Artix Linux. Without journald, all logs are traditional text files in /var/log/.
+
+@text
+Core System Logs
+
+@code bash
+# General system messages (most important catch-all)
+/var/log/messages
+
+# Authentication: sudo, login, ssh, su
+/var/log/auth.log
+
+# Kernel messages (same content as dmesg, but persistent)
+/var/log/kern.log
+
+# Daemon/service messages
+/var/log/daemon.log
+
+# Cron job output and scheduling
+/var/log/cron.log
+
+# Mail system (if running an MTA)
+/var/log/mail.log
+
+@text
+Application Logs
+
+@code bash
+# X.Org / Xwayland display server
+/var/log/Xorg.0.log           # current session
+/var/log/Xorg.0.log.old       # previous session
+
+# Package manager
+/var/log/pacman.log            # all pacman transactions (install/remove/upgrade)
+
+# Boot log (if boot logging enabled)
+/var/log/boot.log
+
+@text
+Quick Viewing Commands
+
+@code bash
+# View recent auth events
+tail -50 /var/log/auth.log
+
+# Follow system messages live
+tail -f /var/log/messages
+
+# Follow multiple logs simultaneously
+tail -f /var/log/messages /var/log/auth.log /var/log/kern.log
+
+# Use multitail for side-by-side log viewing
+multitail /var/log/messages /var/log/auth.log
+
+@text
+Searching Logs
+
+@code bash
+# Find SSH login attempts
+grep "sshd" /var/log/auth.log
+grep "Failed password" /var/log/auth.log
+grep "Accepted" /var/log/auth.log
+
+# Find sudo usage
+grep "sudo" /var/log/auth.log
+
+# Find kernel errors
+grep -i "error\|fail\|panic" /var/log/kern.log
+
+# Find cron job executions
+grep "CRON" /var/log/cron.log
+
+# Search with timestamp range (assuming syslog format)
+awk '/May 10 14:00/,/May 10 15:00/' /var/log/messages
+
+# Find recent package operations
+tail -50 /var/log/pacman.log
+grep "installed\|removed\|upgraded" /var/log/pacman.log | tail -20
+
+# Find Xorg errors
+grep -iE "EE|error|fatal" /var/log/Xorg.0.log
+
+@text
+Log Permissions and Ownership
+
+@code bash
+# View log file permissions
+ls -la /var/log/
+
+# Typical permissions:
+# -rw-r-----  root  log   /var/log/messages
+# -rw-r-----  root  log   /var/log/auth.log
+# -rw-r-----  root  log   /var/log/kern.log
+# -rw-r--r--  root  root  /var/log/pacman.log
+# -rw-r--r--  root  root  /var/log/Xorg.0.log
+
+# Most logs require root or 'log' group membership to read
+# Add user to log group (if needed)
+sudo usermod -aG log $USER
+
+@text
+Log Disk Usage
+
+@code bash
+# Check log directory size
+du -sh /var/log/
+du -sh /var/log/* | sort -h
+
+# Find largest log files
+find /var/log -type f -exec du -h {} + | sort -rh | head -20
+
+# Clean old compressed logs manually
+sudo rm /var/log/*.gz
+sudo rm /var/log/old/*

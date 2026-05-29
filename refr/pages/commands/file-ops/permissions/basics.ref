@@ -1,0 +1,130 @@
+---
+title: Basics
+order: 1
+description: Basic file permissions — chmod, chown, chgrp
+tags: [permissions, chmod, chown, chgrp]
+---
+
+Unix permissions control read, write, and execute access for three classes: user (owner), group, and others.
+
+@text
+Permission structure:
+
+  -rwxrwxrwx
+  │└┬┘└┬┘└┬┘
+  │ │  │  └── others (o)
+  │ │  └───── group  (g)
+  │ └──────── user   (u)
+  └────────── file type (- = file, d = dir, l = link)
+
+  r = read    (4)
+  w = write   (2)
+  x = execute (1)
+
+  For directories:
+    r = list contents
+    w = create/delete files within
+    x = access (cd into, traverse)
+
+@text
+chmod — change file mode (permissions).
+
+@code bash
+# Numeric (octal) mode
+chmod 644 file.txt              # rw-r--r--
+chmod 755 script.sh             # rwxr-xr-x
+chmod 700 private/              # rwx------
+chmod 600 secrets.txt           # rw-------
+chmod 777 file.txt              # rwxrwxrwx (almost never appropriate)
+
+# Common octal values:
+#   755  directories, executable scripts
+#   644  regular files
+#   600  private files (SSH keys, secrets)
+#   700  private directories
+#   775  group-writable directories
+#   664  group-writable files
+
+# Symbolic mode — more readable, relative changes
+chmod u+x script.sh             # add execute for user
+chmod g+w file.txt              # add write for group
+chmod o-rwx file.txt            # remove all for others
+chmod a+r file.txt              # add read for all (a = all)
+chmod ug+rw file.txt            # add read+write for user and group
+
+# Set exact permissions with symbolic mode
+chmod u=rwx,g=rx,o=r file.txt   # rwxr-xr--
+
+# Remove all permissions for group and others
+chmod go= file.txt
+
+# Recursive (apply to directory and all contents)
+chmod -R 755 directory/
+
+# Recursive with different permissions for files and directories
+find /path -type d -exec chmod 755 {} +
+find /path -type f -exec chmod 644 {} +
+
+# Verbose — show changes
+chmod -v 644 file.txt
+
+# Only report changes
+chmod -c 644 file.txt
+
+@text
+chown — change file owner and group.
+
+@code bash
+# Change owner
+sudo chown alice file.txt
+
+# Change owner and group
+sudo chown alice:developers file.txt
+
+# Change group only (note the colon)
+sudo chown :developers file.txt
+
+# Recursive
+sudo chown -R alice:developers directory/
+
+# Change to match a reference file
+sudo chown --reference=ref.txt target.txt
+
+# Don't follow symlinks
+sudo chown -h alice link.txt
+
+# Verbose
+sudo chown -v alice:developers file.txt
+
+@text
+chgrp — change group ownership.
+
+@code bash
+# Change group
+sudo chgrp developers file.txt
+
+# Recursive
+sudo chgrp -R developers directory/
+
+# Change to match a reference file
+sudo chgrp --reference=ref.txt target.txt
+
+@text
+View permissions and ownership.
+
+@code bash
+# List with permissions
+ls -l file.txt
+
+# List directory itself (not contents)
+ls -ld directory/
+
+# List all files including hidden
+ls -la
+
+# Numeric owner/group IDs
+ls -ln
+
+# Stat for detailed permissions
+stat file.txt
+stat -c '%A %a %U %G %n' file.txt    # symbolic, octal, user, group, name

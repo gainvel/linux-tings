@@ -1,0 +1,134 @@
+---
+title: mkinitcpio
+order: 2
+description: mkinitcpio presets, hooks, modules, fallback initramfs
+tags: [mkinitcpio, initramfs, hooks, modules, boot]
+---
+
+mkinitcpio creates initial ramdisk (initramfs) images needed for early boot. It assembles modules, hooks, and files into a cpio archive loaded by the kernel.
+
+@text
+Basic Usage
+
+@code bash
+# Regenerate initramfs for the default preset
+sudo mkinitcpio -P
+
+# Regenerate for a specific preset
+sudo mkinitcpio -p linux
+
+# Regenerate for a specific kernel
+sudo mkinitcpio -k 6.12.1-artix1-1 -g /boot/initramfs-linux.img
+
+# Generate with verbose output (useful for debugging)
+sudo mkinitcpio -P -v
+
+# List all available hooks
+mkinitcpio -L
+
+# Show help for a specific hook
+mkinitcpio -H autodetect
+
+@text
+Configuration — /etc/mkinitcpio.conf
+
+@code bash
+# Key configuration options in /etc/mkinitcpio.conf:
+
+# MODULES — kernel modules to always include (not autodetected)
+# MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)
+# MODULES=(i915)           # Intel GPU early KMS
+# MODULES=(amdgpu)         # AMD GPU early KMS
+
+# BINARIES — extra binaries to include in initramfs
+# BINARIES=(fsck.ext4)
+
+# FILES — extra files to include
+# FILES=(/etc/modprobe.d/nvidia.conf)
+# FILES=(/crypto_keyfile.bin)     # LUKS keyfile
+
+# HOOKS — ordered list of hooks to run
+# Default:
+# HOOKS=(base udev autodetect modconf block filesystems keyboard fsck)
+
+# With encryption:
+# HOOKS=(base udev autodetect modconf block encrypt filesystems keyboard fsck)
+
+# With LVM:
+# HOOKS=(base udev autodetect modconf block lvm2 filesystems keyboard fsck)
+
+# With encryption + LVM:
+# HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck)
+
+# COMPRESSION — compression algorithm
+# COMPRESSION="zstd"
+# COMPRESSION="lz4"         # Faster decompression
+# COMPRESSION="gzip"        # Default, most compatible
+
+@text
+Presets — /etc/mkinitcpio.d/
+
+Each installed kernel has a preset file defining what images to build.
+
+@code bash
+# View preset for the linux kernel
+cat /etc/mkinitcpio.d/linux.preset
+
+# Typical preset contents:
+# ALL_config="/etc/mkinitcpio.conf"
+# ALL_kver="/boot/vmlinuz-linux"
+# PRESETS=('default' 'fallback')
+# default_image="/boot/initramfs-linux.img"
+# fallback_image="/boot/initramfs-linux-fallback.img"
+# fallback_options="-S autodetect"
+
+# The fallback image skips autodetect, including ALL modules
+# Use it when the default image fails to boot (missing driver)
+
+@text
+Important Hooks
+
+@code bash
+# Hook order matters — listed in typical order:
+# base        — essential utilities (busybox or systemd)
+# udev        — dynamic device management (use this for OpenRC systems)
+# autodetect  — reduces initramfs size by only including needed modules
+# modconf     — includes /etc/modprobe.d/ configuration
+# kms         — early KMS (modesetting) for GPU drivers
+# keyboard    — keyboard drivers for early input (passphrase prompts)
+# keymap      — loads /etc/vconsole.conf keymap
+# consolefont — loads /etc/vconsole.conf font
+# block       — block device modules (SATA, NVMe, USB storage)
+# encrypt     — dm-crypt/LUKS support
+# lvm2        — LVM support
+# filesystems — filesystem modules
+# fsck        — filesystem check on boot
+# resume      — resume from hibernation (swap)
+
+@text
+Troubleshooting
+
+@code bash
+# List modules included in an initramfs image
+lsinitcpio /boot/initramfs-linux.img
+
+# List files in initramfs
+lsinitcpio -l /boot/initramfs-linux.img
+
+# Extract initramfs for inspection
+mkdir /tmp/initramfs && cd /tmp/initramfs
+lsinitcpio -x /boot/initramfs-linux.img
+
+# If boot fails, use fallback image:
+# In GRUB menu, select "Advanced > Linux (fallback)"
+# Or at GRUB command line:
+# linux /boot/vmlinuz-linux root=/dev/sda2
+# initrd /boot/initramfs-linux-fallback.img
+# boot
+
+# After booting with fallback, fix and rebuild:
+sudo mkinitcpio -P
+
+# Common errors:
+# "ERROR: module not found" — install the driver package
+# "WARNING: No modules were added" — autodetect missed it, add to MODULES=()

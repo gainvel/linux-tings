@@ -1,0 +1,108 @@
+---
+title: Network Interfaces
+order: 1
+description: ip link, ip addr, ip route, ip neigh, bridge
+tags: [ip, interface, route, arp, bridge, link, addr]
+---
+
+The iproute2 suite replaces legacy ifconfig/route/arp tools. All subcommands
+accept abbreviated forms (e.g. `ip a` for `ip addr`).
+
+@code bash
+# ---- ip link: manage network interfaces ----
+
+ip link show                        # list all interfaces
+ip link show dev eth0               # show specific interface
+ip link set eth0 up                 # bring interface up
+ip link set eth0 down               # bring interface down
+ip link set eth0 mtu 9000           # set MTU
+ip link set eth0 promisc on         # enable promiscuous mode
+ip link set eth0 name lan0          # rename interface (must be down)
+ip link set eth0 master br0         # attach to bridge
+ip link set eth0 nomaster           # detach from bridge
+
+# virtual interfaces
+ip link add veth0 type veth peer name veth1   # veth pair
+ip link add bond0 type bond                    # bonding
+ip link add dummy0 type dummy                  # dummy interface
+ip link delete veth0                           # remove virtual interface
+
+@text
+Interface naming: Artix/Arch uses predictable names (enp3s0, wlp2s0) by
+default. To see the mapping between driver and predictable names, check
+`/sys/class/net/*/device/uevent`.
+
+@code bash
+# ---- ip addr: manage IP addresses ----
+
+ip addr show                              # all addresses
+ip addr show dev eth0                     # specific interface
+ip addr show scope global                 # only globally-routed addresses
+ip -4 addr show                           # IPv4 only
+ip -6 addr show                           # IPv6 only
+
+ip addr add 192.168.1.10/24 dev eth0                  # add address
+ip addr add 192.168.1.10/24 brd + dev eth0             # add with auto broadcast
+ip addr add 192.168.1.10/24 dev eth0 label eth0:1      # add alias
+ip addr del 192.168.1.10/24 dev eth0                   # remove address
+ip addr flush dev eth0                                  # remove all addresses
+
+@code bash
+# ---- ip route: manage routing table ----
+
+ip route show                             # show main routing table
+ip route show table all                   # show all tables
+ip route get 8.8.8.8                      # query route for destination
+
+ip route add default via 192.168.1.1 dev eth0              # default gateway
+ip route add 10.0.0.0/8 via 192.168.1.1                   # static route
+ip route add 10.0.0.0/8 via 192.168.1.1 metric 100        # with metric
+ip route del 10.0.0.0/8                                    # remove route
+ip route replace default via 192.168.1.254                 # replace existing
+ip route flush table main                                  # flush all routes
+
+# policy routing
+ip rule show                                              # list rules
+ip rule add from 192.168.1.0/24 table 100                 # source-based routing
+ip route add default via 10.0.0.1 table 100
+
+@code bash
+# ---- ip neigh: ARP / neighbor table ----
+
+ip neigh show                             # show ARP cache
+ip neigh show dev eth0                    # specific interface
+ip neigh add 192.168.1.5 lladdr aa:bb:cc:dd:ee:ff dev eth0   # static entry
+ip neigh del 192.168.1.5 dev eth0        # remove entry
+ip neigh flush dev eth0                  # flush entries
+
+@code bash
+# ---- bridge: manage bridge interfaces ----
+
+ip link add br0 type bridge               # create bridge
+ip link set br0 up
+ip link set eth0 master br0               # add port to bridge
+ip link set eth1 master br0
+bridge link show                          # show bridge ports
+bridge fdb show                           # forwarding database
+bridge vlan show                          # VLAN info
+
+# alternative: brctl (bridge-utils, legacy)
+brctl addbr br0                           # create
+brctl addif br0 eth0                      # add interface
+brctl show                                # list bridges
+brctl showmacs br0                        # MAC table
+
+@text
+Persistence: iproute2 commands are not persistent across reboots. For
+persistence, use netifrc scripts in /etc/conf.d/net.* (OpenRC) or create
+a custom init script. NetworkManager and ConnMan also handle persistence.
+
+@code bash
+# ---- useful flags ----
+
+ip -s link show                   # statistics (rx/tx bytes, errors)
+ip -d link show                   # detailed info (driver, etc.)
+ip -j addr show                   # JSON output
+ip -j -p route show               # JSON pretty-printed
+ip -c addr show                   # colorized output
+ip monitor                        # monitor netlink events in real time

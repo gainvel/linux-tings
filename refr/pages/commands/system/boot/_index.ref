@@ -1,0 +1,8 @@
+---
+title: Boot
+order: 1
+description: Bootloader and startup
+tags: [boot, grub, mkinitcpio, efi, bootloader]
+---
+
+Bootloader configuration (GRUB), initramfs generation (mkinitcpio), and EFI boot management.

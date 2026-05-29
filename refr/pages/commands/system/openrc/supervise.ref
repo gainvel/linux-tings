@@ -1,0 +1,137 @@
+---
+title: supervise-daemon
+order: 5
+description: supervise-daemon, respawn, pidfile
+tags: [openrc, supervise-daemon, respawn, process-supervision]
+---
+
+supervise-daemon is OpenRC's built-in process supervisor. It monitors a service and restarts it if it dies, replacing the older start-stop-daemon for supervised services.
+
+@text
+Basic Usage in Init Scripts
+
+Use supervise-daemon instead of start-stop-daemon by setting supervisor in your init script.
+
+@code bash
+#!/usr/bin/openrc-run
+
+description="Supervised service example"
+supervisor=supervise-daemon
+command="/usr/bin/myservice"
+command_args="--foreground --config /etc/myservice.conf"
+command_user="myuser:mygroup"
+
+# supervise-daemon manages the pidfile automatically
+# pidfile="/run/${RC_SVCNAME}.pid"   # optional, auto-generated
+
+depend() {
+    need net
+}
+
+@text
+Respawn Configuration
+
+@code bash
+# Control respawn behavior with these variables in the init script:
+
+# Maximum number of respawns within a time period
+respawn_max=10
+
+# Time period (seconds) for respawn counting
+respawn_period=60
+
+# Delay (seconds) before restarting after a crash
+respawn_delay=5
+
+# Example: restart up to 10 times per minute, 5s between attempts
+#!/usr/bin/openrc-run
+supervisor=supervise-daemon
+command="/usr/bin/myservice"
+command_args="--foreground"
+respawn_max=10
+respawn_period=60
+respawn_delay=5
+
+# If respawn_max is exceeded within respawn_period,
+# the service is marked as crashed and stops respawning
+
+@text
+supervise-daemon Direct Usage
+
+@code bash
+# Start a supervised process directly (unusual — typically via init scripts)
+supervise-daemon myservice --start \
+  --pidfile /run/myservice.pid \
+  --respawn-max 5 \
+  --respawn-period 30 \
+  --respawn-delay 3 \
+  /usr/bin/myservice -- --foreground
+
+# Stop a supervised process
+supervise-daemon myservice --stop \
+  --pidfile /run/myservice.pid
+
+# Restart (stop then start)
+supervise-daemon myservice --stop --pidfile /run/myservice.pid
+supervise-daemon myservice --start --pidfile /run/myservice.pid \
+  /usr/bin/myservice -- --foreground
+
+@text
+Key Variables
+
+@code bash
+# supervisor              — set to "supervise-daemon" to enable supervision
+# command                 — daemon executable (MUST run in foreground)
+# command_args            — arguments to the daemon
+# command_user            — user:group to run as
+# supervise_daemon_args   — extra args to supervise-daemon itself
+# respawn_max             — max respawns before marking crashed (default: 10)
+# respawn_period          — counting window in seconds (default: 0 = no limit)
+# respawn_delay           — seconds to wait before respawning (default: 0)
+# output_log              — redirect stdout to log file
+# error_log               — redirect stderr to log file
+# healthcheck_timer       — seconds between health checks (if healthcheck() defined)
+# healthcheck_delay       — seconds to wait before first health check
+
+@text
+Health Checks
+
+@code bash
+# Define a healthcheck() function in your init script
+# supervise-daemon calls it periodically if healthcheck_timer is set
+
+#!/usr/bin/openrc-run
+
+supervisor=supervise-daemon
+command="/usr/bin/myservice"
+command_args="--foreground"
+healthcheck_timer=30
+healthcheck_delay=10
+
+healthcheck() {
+    # Return 0 if healthy, non-zero to trigger restart
+    curl -sf http://localhost:8080/health > /dev/null 2>&1
+}
+
+@text
+Comparison with start-stop-daemon
+
+@code bash
+# start-stop-daemon (traditional):
+# - Starts the process, then forgets about it
+# - No automatic restart on crash
+# - Process must daemonize itself or use command_background=true
+# - Simpler, suitable for robust daemons
+
+# supervise-daemon:
+# - Continuously monitors the process
+# - Automatically restarts on crash (configurable)
+# - Process MUST run in foreground (no daemonizing)
+# - Supports health checks
+# - Better for services that may crash or need monitoring
+
+# To switch from start-stop-daemon to supervise-daemon:
+# 1. Add: supervisor=supervise-daemon
+# 2. Remove: command_background=true (process must stay in foreground)
+# 3. Add foreground flags to command_args if needed
+# 4. Optionally add respawn_* and healthcheck

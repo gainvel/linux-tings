@@ -1,0 +1,8 @@
+---
+title: OpenRC
+order: 4
+description: Init system (OpenRC)
+tags: [openrc, init, services, runlevels]
+---
+
+OpenRC is Artix Linux's init system — a dependency-based service manager replacing systemd.

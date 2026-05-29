@@ -1,0 +1,137 @@
+---
+title: GRUB
+order: 1
+description: grub-install, grub-mkconfig, /etc/default/grub, rescue
+tags: [grub, bootloader, boot, grub-install, grub-mkconfig]
+---
+
+GRUB (GRand Unified Bootloader) is the default bootloader for most Arch-based installations.
+
+@text
+Installation
+
+@code bash
+# Install GRUB to MBR (BIOS/legacy)
+sudo grub-install --target=i386-pc /dev/sda
+
+# Install GRUB for UEFI
+sudo grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+
+# Install with removable flag (fallback for some UEFI firmware)
+sudo grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --removable
+
+# Verify installation
+ls /boot/grub/
+ls /boot/efi/EFI/GRUB/
+
+@text
+Configuration
+
+GRUB reads /etc/default/grub for settings and generates grub.cfg via grub-mkconfig.
+
+@code bash
+# Generate/regenerate grub.cfg
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+# Key /etc/default/grub settings:
+# GRUB_DEFAULT=0                        # Default menu entry (0-indexed or "saved")
+# GRUB_TIMEOUT=5                        # Seconds to show menu (0=skip, -1=wait)
+# GRUB_TIMEOUT_STYLE=menu               # menu, countdown, hidden
+# GRUB_CMDLINE_LINUX_DEFAULT="quiet"    # Kernel params for default entries
+# GRUB_CMDLINE_LINUX=""                  # Kernel params for ALL entries
+# GRUB_DISABLE_OS_PROBER=false          # Detect other OSes
+# GRUB_GFXMODE=1920x1080                # GRUB screen resolution
+# GRUB_ENABLE_CRYPTODISK=y              # LUKS support
+
+# After editing /etc/default/grub, always regenerate:
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+@text
+Adding Kernel Parameters
+
+@code bash
+# Temporary: edit at boot (press 'e' in GRUB menu, find linux line)
+
+# Permanent: edit /etc/default/grub
+# GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=3 nvidia-drm.modeset=1"
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+# Verify current kernel parameters
+cat /proc/cmdline
+
+@text
+Custom Menu Entries
+
+@code bash
+# Custom entries go in /etc/grub.d/40_custom
+# Example: boot from ISO
+# menuentry "SystemRescue ISO" {
+#     set isofile="/boot/systemrescue.iso"
+#     loopback loop $isofile
+#     linux (loop)/sysresccd/boot/x86_64/vmlinuz archisobasedir=sysresccd img_dev=/dev/sda2 img_loop=$isofile
+#     initrd (loop)/sysresccd/boot/x86_64/sysresccd.img
+# }
+
+# Make the script executable
+sudo chmod +x /etc/grub.d/40_custom
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+@text
+OS Detection
+
+@code bash
+# Install os-prober for dual-boot detection
+sudo pacman -S os-prober
+
+# Ensure os-prober is enabled
+# In /etc/default/grub:
+# GRUB_DISABLE_OS_PROBER=false
+
+# Run os-prober manually
+sudo os-prober
+
+# Regenerate with detected OSes
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+@text
+GRUB Rescue
+
+When GRUB drops to a rescue shell due to missing files or wrong partition.
+
+@code bash
+# From grub rescue>  prompt:
+# List available drives and partitions
+ls
+ls (hd0,gpt2)/
+
+# Set root and prefix
+set root=(hd0,gpt2)
+set prefix=(hd0,gpt2)/boot/grub
+
+# Load normal module and boot
+insmod normal
+normal
+
+# If normal module not found, load manually:
+insmod linux
+linux /boot/vmlinuz-linux root=/dev/sda2
+initrd /boot/initramfs-linux.img
+boot
+
+# After booting, fix GRUB permanently:
+sudo grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+@text
+GRUB Themes
+
+@code bash
+# Set a theme in /etc/default/grub:
+# GRUB_THEME="/boot/grub/themes/mytheme/theme.txt"
+
+# Install a theme
+sudo cp -r /path/to/theme /boot/grub/themes/
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+# Popular theme packages (AUR):
+# grub-theme-vimix, grub-theme-stylish

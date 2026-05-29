@@ -1,0 +1,9 @@
+---
+title: SSH
+order: 8
+description: Secure remote access
+tags: [ssh, remote, secure shell]
+---
+
+OpenSSH client and key management. Connection basics, key generation,
+file transfers, and tunneling.

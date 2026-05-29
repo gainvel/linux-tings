@@ -1,0 +1,110 @@
+---
+title: S.M.A.R.T.
+order: 5
+description: Disk health monitoring with smartctl and smartd
+tags: [disk, smart, smartctl, smartd, health]
+---
+
+S.M.A.R.T. (Self-Monitoring, Analysis, and Reporting Technology) monitors disk health and predicts failures. Requires the smartmontools package.
+
+@code bash
+# Install smartmontools
+sudo pacman -S smartmontools
+
+@text
+Querying disk health with smartctl.
+
+@code bash
+# Check if SMART is available and enabled
+sudo smartctl -i /dev/sda
+
+# Enable SMART on a drive
+sudo smartctl -s on /dev/sda
+
+# Quick health check (pass/fail)
+sudo smartctl -H /dev/sda
+
+# Show all SMART attributes
+sudo smartctl -A /dev/sda
+
+# Full info: health + attributes + capabilities
+sudo smartctl -a /dev/sda
+
+# Show error log
+sudo smartctl -l error /dev/sda
+
+# Show self-test results
+sudo smartctl -l selftest /dev/sda
+
+@text
+Key SMART attributes to watch (lower raw values are better for most):
+
+  5   Reallocated_Sector_Ct   — bad sectors remapped (any > 0 is concerning)
+  187 Reported_Uncorrect      — uncorrectable errors
+  188 Command_Timeout         — aborted operations
+  197 Current_Pending_Sector  — unstable sectors waiting for remap
+  198 Offline_Uncorrectable   — sectors that couldn't be read offline
+  199 UDMA_CRC_Error_Count    — cable/interface errors
+
+For NVMe drives, check: Critical Warning, Media Errors, Percentage Used.
+
+@text
+Run SMART self-tests.
+
+@code bash
+# Short self-test (~2 minutes)
+sudo smartctl -t short /dev/sda
+
+# Long self-test (can take hours depending on disk size)
+sudo smartctl -t long /dev/sda
+
+# Conveyance test (post-shipping check, ~5 minutes)
+sudo smartctl -t conveyance /dev/sda
+
+# Check test progress
+sudo smartctl -l selftest /dev/sda
+
+# Abort a running test
+sudo smartctl -X /dev/sda
+
+@text
+NVMe drives use a different info path.
+
+@code bash
+# NVMe health info
+sudo smartctl -a /dev/nvme0
+
+# Or specify the namespace
+sudo smartctl -a /dev/nvme0n1
+
+# NVMe-specific: show percentage used, power-on hours, media errors
+sudo smartctl -A /dev/nvme0n1
+
+@text
+Configure smartd for continuous monitoring. On Artix with OpenRC, the service is managed via rc-service.
+
+@code bash
+# Edit smartd configuration
+sudo vi /etc/smartd.conf
+
+# Monitor all drives, check every 30 minutes, email on problems:
+# DEVICESCAN -a -o on -S on -n standby,q -s (S/../.././02|L/../../6/03) -m root
+
+# Monitor specific drive with temperature tracking
+# /dev/sda -a -o on -S on -W 4,45,55 -m root
+
+# Start/enable smartd service (OpenRC)
+sudo rc-service smartd start
+sudo rc-update add smartd default
+
+# Check smartd status
+sudo rc-service smartd status
+
+@text
+Quick disk health summary script.
+
+@code bash
+# One-liner: check health of all drives
+for dev in /dev/sd? /dev/nvme?n?; do
+  [ -e "$dev" ] && echo "=== $dev ===" && sudo smartctl -H "$dev" | grep -i "result\|status"
+done

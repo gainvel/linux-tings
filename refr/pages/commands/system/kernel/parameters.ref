@@ -1,0 +1,139 @@
+---
+title: Kernel Parameters
+order: 2
+description: sysctl, /proc/sys, /etc/sysctl.d, boot parameters
+tags: [kernel, sysctl, parameters, proc, tuning]
+---
+
+Runtime kernel parameters via sysctl (/proc/sys) and boot-time parameters via the kernel command line.
+
+@text
+sysctl — View and Modify Runtime Parameters
+
+@code bash
+# View all current kernel parameters
+sysctl -a
+
+# View a specific parameter
+sysctl net.ipv4.ip_forward
+sysctl vm.swappiness
+
+# Set a parameter temporarily (until reboot)
+sudo sysctl net.ipv4.ip_forward=1
+sudo sysctl vm.swappiness=10
+
+# Set multiple parameters
+sudo sysctl -w net.core.somaxconn=1024 -w net.ipv4.tcp_max_syn_backlog=1024
+
+# Load settings from a file
+sudo sysctl -p /etc/sysctl.d/99-custom.conf
+
+# Load all sysctl config files
+sudo sysctl --system
+
+@text
+Reading /proc/sys Directly
+
+The /proc/sys filesystem mirrors sysctl parameters as files.
+
+@code bash
+# Read a parameter
+cat /proc/sys/net/ipv4/ip_forward
+cat /proc/sys/vm/swappiness
+
+# Write a parameter (same as sysctl -w)
+echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward
+echo 10 | sudo tee /proc/sys/vm/swappiness
+
+# Directory structure maps to dotted sysctl names:
+# sysctl net.ipv4.ip_forward  =  /proc/sys/net/ipv4/ip_forward
+# sysctl vm.swappiness         =  /proc/sys/vm/swappiness
+
+@text
+Persistent Parameters — /etc/sysctl.d/
+
+@code bash
+# Create a custom sysctl config (files are read in alphabetical order)
+sudo tee /etc/sysctl.d/99-custom.conf << 'EOF'
+# Reduce swappiness
+vm.swappiness = 10
+
+# Enable IP forwarding (for VMs/containers)
+net.ipv4.ip_forward = 1
+
+# Increase inotify watches (for large projects)
+fs.inotify.max_user_watches = 524288
+
+# Security: disable ICMP redirects
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv6.conf.all.accept_redirects = 0
+
+# Security: enable SYN cookies
+net.ipv4.tcp_syncookies = 1
+
+# Performance: increase network buffer sizes
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+EOF
+
+# Apply immediately
+sudo sysctl --system
+
+# File naming convention:
+# /etc/sysctl.d/  — custom configs (99- prefix for lowest priority)
+# /usr/lib/sysctl.d/  — package defaults (don't edit)
+# /etc/sysctl.conf  — legacy location (still works)
+
+@text
+Useful Parameters
+
+@code bash
+# Memory
+sysctl vm.swappiness              # 0-200, lower = prefer RAM (default 60)
+sysctl vm.vfs_cache_pressure      # inode/dentry cache reclaim (default 100)
+sysctl vm.dirty_ratio             # % of RAM for dirty pages before sync (default 20)
+sysctl vm.dirty_background_ratio  # % of RAM for background writeback (default 10)
+sysctl vm.overcommit_memory       # 0=heuristic, 1=always, 2=never
+
+# Networking
+sysctl net.ipv4.ip_forward        # Enable routing / NAT
+sysctl net.ipv4.tcp_congestion_control  # BBR, cubic, reno
+sysctl net.core.somaxconn         # Max listen backlog
+
+# File system
+sysctl fs.file-max                # Max open files system-wide
+sysctl fs.inotify.max_user_watches  # inotify watch limit
+
+# Kernel
+sysctl kernel.pid_max             # Max PID value
+sysctl kernel.sched_autogroup_enabled  # Desktop responsiveness
+sysctl kernel.sysrq               # Magic SysRq key (1=enable all)
+
+@text
+Boot-Time Kernel Parameters
+
+Parameters passed to the kernel at boot via the bootloader command line.
+
+@code bash
+# View current boot parameters
+cat /proc/cmdline
+
+# Set via GRUB (/etc/default/grub):
+# GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=3"
+# GRUB_CMDLINE_LINUX=""
+# Then: sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+# Common boot parameters:
+# quiet                    — suppress most boot messages
+# loglevel=3               — only show errors (0=emerg to 7=debug)
+# splash                   — show splash screen (if plymouth installed)
+# root=/dev/sda2           — root filesystem device
+# resume=/dev/sda3         — hibernation resume device
+# nvidia-drm.modeset=1     — NVIDIA KMS mode setting
+# i915.enable_guc=2        — Intel GuC/HuC firmware loading
+# amd_iommu=on             — AMD IOMMU for VFIO passthrough
+# intel_iommu=on           — Intel IOMMU for VFIO passthrough
+# mitigations=off          — disable CPU vulnerability mitigations (risky)
+# nowatchdog               — disable watchdog timers
+# nmi_watchdog=0           — disable NMI watchdog
+# modprobe.blacklist=nouveau  — blacklist module at boot

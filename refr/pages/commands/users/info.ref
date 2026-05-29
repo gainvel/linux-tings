@@ -1,0 +1,195 @@
+---
+title: User Info
+order: 4
+description: whoami, id, who, w, last, lastlog
+tags: [whoami, id, who, w, last, lastlog, user-info]
+---
+
+Commands for querying user identity, sessions, and login history.
+
+@text
+whoami — Current Username
+
+@code bash
+# Print effective username
+whoami
+
+# Equivalent using id
+id -un
+
+# Print effective user ID
+id -u
+
+@text
+id — User and Group IDs
+
+@code bash
+# Show full identity (UID, GID, groups)
+id
+
+# Show for a specific user
+id username
+
+# Show only UID
+id -u
+id -u username
+
+# Show only primary GID
+id -g
+id -g username
+
+# Show all group IDs
+id -G
+id -G username
+
+# Show all group names
+id -Gn
+id -Gn username
+
+# Show primary group name
+id -gn
+
+# Show SELinux context (if applicable)
+id -Z
+
+@text
+who — Logged-In Users
+
+@code bash
+# Show who is currently logged in
+who
+
+# Show with idle time and PID
+who -u
+
+# Show current runlevel (less relevant on OpenRC but works)
+who -r
+
+# Show boot time
+who -b
+
+# Show all information
+who -a
+
+# Count logged-in users
+who | wc -l
+
+# Show hostname for remote logins
+who --ips
+
+@text
+w — Who and What They're Doing
+
+@code bash
+# Show logged-in users and their activity
+w
+
+# Show without header
+w -h
+
+# Show for a specific user
+w username
+
+# Show short format (no login time, JCPU, PCPU)
+w -s
+
+# Output fields:
+# USER   — username
+# TTY    — terminal
+# FROM   — remote host or display
+# LOGIN@ — login time
+# IDLE   — idle time
+# JCPU   — total CPU time of all processes on the tty
+# PCPU   — CPU time of current process
+# WHAT   — current command
+
+@text
+last — Login History
+
+@code bash
+# Show recent logins
+last
+
+# Show last N entries
+last -n 20
+
+# Show logins for a specific user
+last username
+
+# Show logins for a specific terminal
+last tty1
+last pts/0
+
+# Show with hostname/IP (for remote logins)
+last -a
+
+# Show full timestamps
+last -F
+
+# Show system reboots
+last reboot
+
+# Show system shutdowns
+last -x shutdown
+
+# Show bad login attempts
+sudo lastb
+sudo lastb -n 20
+
+# Show since a specific date
+last -s 2026-05-01
+
+# Show until a specific date
+last -t 2026-05-10
+
+# Show from a specific wtmp file
+last -f /var/log/wtmp.1
+
+@text
+lastlog — Last Login for All Users
+
+@code bash
+# Show last login time for all users
+lastlog
+
+# Show for a specific user
+lastlog -u username
+
+# Show users who logged in within the last N days
+lastlog -t 7
+
+# Show users who never logged in
+lastlog | grep "Never"
+
+@text
+Other Identity Commands
+
+@code bash
+# Show login name (from utmp, may differ from whoami in some contexts)
+logname
+
+# Show all groups current user belongs to
+groups
+
+# Show groups for a specific user
+groups username
+
+# Show finger-style user info (if finger is installed)
+finger username
+
+# Query user info from NSS (works with LDAP/SSSD)
+getent passwd username
+
+# Check if user exists
+id username 2>/dev/null && echo "exists" || echo "not found"
+getent passwd username > /dev/null && echo "exists" || echo "not found"
+
+# Show password aging info
+sudo chage -l username
+
+# Password aging fields:
+# Last password change
+# Password expires
+# Account expires
+# Minimum/maximum days between changes
+# Warning days before expiration

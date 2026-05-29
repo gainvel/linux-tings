@@ -1,0 +1,104 @@
+---
+title: Yay Management
+order: 2
+description: yay -Yc, --cleanafter, --diff, --editmenu
+tags: [yay, clean, config, diff, management]
+---
+
+Managing yay configuration, build artifacts, and review workflows.
+
+@code bash
+# ---- cleanup ----
+
+yay -Yc                                   # remove unneeded dependencies
+yay -Sc                                   # clean package cache (pacman + yay)
+yay -Scc                                  # clean all caches
+
+# clean build directory
+rm -rf ~/.cache/yay/                      # remove all build files
+
+# clean specific package build
+rm -rf ~/.cache/yay/package/
+
+# check cache size
+du -sh ~/.cache/yay/
+
+@code bash
+# ---- build directory ----
+
+# default build location
+ls ~/.cache/yay/                          # list cached builds
+
+# change build directory
+yay --builddir /tmp/yay-builds -S package
+
+@code bash
+# ---- PKGBUILD review (diff) ----
+
+# yay shows diffs by default on updates
+# control diff behavior:
+
+yay -S package --diffmenu                 # prompt to view diff
+yay -S package --nodiffmenu              # skip diff prompt
+yay -S package --diff                     # always show diff
+
+# edit PKGBUILD before building
+yay -S package --editmenu                 # prompt to edit
+yay -S package --noeditmenu              # skip edit prompt
+
+@code bash
+# ---- yay configuration ----
+
+# show current config
+yay -Y --show
+
+# persistent configuration: ~/.config/yay/config.json
+# generated with:
+yay --save --cleanafter                   # clean build files after install
+yay --save --sudoloop                     # keep sudo alive during builds
+yay --save --removemake                   # remove make deps after build
+yay --save --provides                     # check AUR for provides
+yay --save --batchinstall                 # batch installs for fewer prompts
+yay --save --combinedupgrade              # combine repo+AUR upgrade prompts
+yay --save --devel                        # check -git packages for updates
+
+@code bash
+# ---- yay stats ----
+
+yay -Ps                                   # print system stats
+# shows:
+#   total installed packages
+#   total size
+#   top 10 largest packages
+#   packages not in a repo (AUR/orphaned)
+
+@code bash
+# ---- advanced options ----
+
+# use a specific AUR URL
+yay --aururl "https://aur.archlinux.org" -S package
+
+# pass flags to makepkg
+yay -S package --mflags "--skippgpcheck"  # skip PGP verification
+yay -S package --mflags "--nocheck"       # skip test suite
+yay -S package --mflags "-j$(nproc)"      # parallel compilation
+
+# pass flags to git
+yay -S package --gitflags "--depth=1"     # shallow clone
+
+# pass flags to pacman
+yay -S package --pacmanflags "--overwrite '*'"
+
+@text
+Recommended persistent configuration:
+
+@code bash
+yay --save --cleanafter --removemake --sudoloop --batchinstall --combinedupgrade
+
+@text
+This sets yay to:
+- Clean build files after successful install (saves disk)
+- Remove make-only dependencies after building
+- Keep sudo alive during long compilations
+- Batch package installs to reduce prompts
+- Combine repo and AUR upgrades into one prompt

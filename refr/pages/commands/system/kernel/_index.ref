@@ -1,0 +1,8 @@
+---
+title: Kernel
+order: 2
+description: Kernel management
+tags: [kernel, modules, sysctl, dmesg, parameters]
+---
+
+Kernel management — modules, runtime parameters, ring buffer messages, and system information.

@@ -1,0 +1,238 @@
+---
+title: Viewing
+order: 4
+description: less, head, tail (-f follow), cat, tac, bat, nl
+tags: [less, head, tail, cat, tac, bat, nl, viewing, pager]
+---
+
+Tools for viewing file contents — paging, previewing, following, and formatting.
+
+@text
+less — Pager
+
+@code bash
+# View a file
+less file.txt
+
+# Key bindings:
+# Space/PgDn      page forward
+# b/PgUp          page backward
+# g               go to beginning
+# G               go to end
+# /pattern        search forward
+# ?pattern        search backward
+# n               next search match
+# N               previous search match
+# q               quit
+# h               help
+# F               follow mode (like tail -f, Ctrl+C to stop)
+# &pattern        show only lines matching pattern
+# v               open in $EDITOR
+# =               show file info (line number, percentage)
+# -N              toggle line numbers
+# -S              toggle line wrapping
+
+# Start with line numbers
+less -N file.txt
+
+# Start without line wrapping (horizontal scroll)
+less -S file.txt
+
+# Start at a specific line
+less +100 file.txt
+
+# Start at first match of pattern
+less +/ERROR logfile.txt
+
+# View multiple files
+less file1.txt file2.txt
+# :n  next file,  :p  previous file
+
+# Pipe into less
+grep -rn "TODO" . | less
+
+# Follow mode (like tail -f but with scrollback)
+less +F /var/log/messages
+
+# Raw control characters (for colored output)
+command --color=always | less -R
+
+@text
+head — Show Beginning of File
+
+@code bash
+# Show first 10 lines (default)
+head file.txt
+
+# Show first N lines
+head -n 20 file.txt
+head -20 file.txt
+
+# Show all but the last N lines
+head -n -5 file.txt
+
+# Show first N bytes
+head -c 100 file.txt
+
+# Show first N bytes with units
+head -c 1K file.txt
+head -c 1M file.txt
+
+# Multiple files (shows headers)
+head -n 5 *.txt
+
+@text
+tail — Show End of File
+
+@code bash
+# Show last 10 lines (default)
+tail file.txt
+
+# Show last N lines
+tail -n 20 file.txt
+tail -20 file.txt
+
+# Show from line N onward
+tail -n +100 file.txt       # everything from line 100
+
+# Show last N bytes
+tail -c 100 file.txt
+
+# Follow a file (watch for new lines)
+tail -f /var/log/messages
+
+# Follow and retry (if file is recreated / rotated)
+tail -F /var/log/messages
+
+# Follow multiple files
+tail -f /var/log/messages /var/log/auth.log
+
+# Follow with PID (stop when process exits)
+tail -f --pid=$$ logfile.txt
+
+# Follow with limited output (last 0 lines, only new)
+tail -f -n 0 /var/log/messages
+
+@text
+cat — Concatenate and Print
+
+@code bash
+# Display file contents
+cat file.txt
+
+# Display with line numbers
+cat -n file.txt
+
+# Display with line numbers (non-blank lines only)
+cat -b file.txt
+
+# Show non-printing characters
+cat -v file.txt
+
+# Show tabs as ^I
+cat -T file.txt
+
+# Show line endings as $
+cat -E file.txt
+
+# Show everything (combines -vET)
+cat -A file.txt
+
+# Concatenate multiple files
+cat file1.txt file2.txt > combined.txt
+
+# Append to a file
+cat newdata.txt >> existing.txt
+
+# Create a file from stdin (Ctrl+D to end)
+cat > newfile.txt
+
+# Number output lines from a pipe
+some_command | cat -n
+
+@text
+tac — Reverse Line Order
+
+@code bash
+# Print file with lines in reverse order
+tac file.txt
+
+# Reverse with custom separator
+tac -s "---" file.txt
+
+# Useful for viewing newest-first in logs
+tac /var/log/messages | head -20
+
+# Reverse pipe output
+history | tac
+
+@text
+bat — cat with Syntax Highlighting
+
+@code bash
+# Install bat
+sudo pacman -S bat
+
+# View file with syntax highlighting and line numbers
+bat file.go
+
+# View with specific language highlighting
+bat -l python script
+
+# Plain mode (no decorations, just highlighting)
+bat -p file.go
+
+# Show only line numbers and content (no header/grid)
+bat --style=numbers file.go
+
+# Show non-printing characters
+bat -A file.txt
+
+# Disable paging (like cat)
+bat --paging=never file.go
+
+# Highlight specific lines
+bat --highlight-line 15 --highlight-line 20-25 file.go
+
+# Show diff
+bat --diff file.go
+
+# Use as pager for other commands
+export MANPAGER="bat -l man -p"
+export BAT_PAGER="less -R"
+
+# List available themes
+bat --list-themes
+
+# Use a specific theme
+bat --theme="Dracula" file.go
+
+# List recognized languages
+bat --list-languages
+
+@text
+nl — Number Lines
+
+@code bash
+# Number all lines
+nl file.txt
+
+# Number non-empty lines only (default)
+nl -b t file.txt
+
+# Number all lines including blank
+nl -b a file.txt
+
+# Custom number format
+nl -n ln file.txt         # left-justified
+nl -n rn file.txt         # right-justified (default)
+nl -n rz file.txt         # right-justified with leading zeros
+
+# Custom separator
+nl -s '. ' file.txt       # "  1. line content"
+
+# Custom width
+nl -w 3 file.txt          # 3-digit line numbers
+
+# Start from a specific number
+nl -v 100 file.txt

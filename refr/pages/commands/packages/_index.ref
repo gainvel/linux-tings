@@ -1,0 +1,10 @@
+---
+title: Packages
+order: 6
+description: Package management
+tags: [packages, pacman, yay, aur]
+---
+
+Package management with pacman (official repos) and yay (AUR). Artix uses
+the same package format and repositories as Arch, plus its own repos for
+OpenRC/runit/s6 init-specific packages.

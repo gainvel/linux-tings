@@ -1,0 +1,105 @@
+---
+title: History
+order: 4
+description: Log, diff, show, blame, bisect, and shortlog
+tags: [git, log, diff, show, blame, bisect, shortlog, history]
+---
+
+Inspecting repository history and changes between commits.
+
+@code bash
+# Basic log
+git log
+git log --oneline                # compact: hash + message
+git log --oneline -10            # last 10 commits
+git log --graph --oneline --all  # ASCII branch graph
+git log --stat                   # show changed files per commit
+git log -p                       # show full patches
+git log --format="%h %an %s"    # custom format
+
+# Filter log
+git log --author="name"
+git log --since="2 weeks ago"
+git log --until="2025-01-01"
+git log --grep="fix"             # search commit messages
+git log -S "functionName"        # commits that add/remove string (pickaxe)
+git log -G "regex"               # commits matching regex in diff
+git log -- path/to/file          # commits touching specific file
+git log main..feature            # commits in feature not in main
+git log main...feature           # commits in either but not both
+
+@text
+Diff shows changes between commits, staging area, and working tree.
+
+@code bash
+# Working tree vs staging area
+git diff
+git diff file.go                 # single file
+
+# Staging area vs last commit
+git diff --staged
+git diff --cached                # same as --staged
+
+# Between commits/branches
+git diff main feature-auth
+git diff HEAD~3 HEAD
+git diff abc1234 def5678
+git diff main...feature          # changes since branches diverged
+
+# Diff options
+git diff --stat                  # summary only
+git diff --name-only             # just filenames
+git diff --name-status           # filenames with status (A/M/D)
+git diff --word-diff             # inline word-level diff
+git diff --color-words           # colored word diff
+git diff -w                      # ignore whitespace changes
+
+@text
+Show displays a commit's metadata and diff. Blame annotates each line
+with the commit that last modified it.
+
+@code bash
+# Show commit details
+git show HEAD
+git show abc1234
+git show HEAD:path/to/file       # show file at specific commit
+git show v1.0                    # show tag details
+git show --stat HEAD             # summary only
+
+# Blame: who changed each line
+git blame file.go
+git blame -L 10,20 file.go      # lines 10-20 only
+git blame -L :funcName file.go  # lines of a function
+git blame -w                     # ignore whitespace
+git blame -C                     # detect code moved from other files
+git blame --since="3 months ago" file.go
+
+@text
+Bisect performs binary search to find the commit that introduced a bug.
+
+@code bash
+# Manual bisect
+git bisect start
+git bisect bad                   # current commit is bad
+git bisect good v1.0             # v1.0 was good
+# Git checks out a middle commit. Test it, then:
+git bisect good                  # or: git bisect bad
+# Repeat until the first bad commit is found
+git bisect reset                 # return to original branch
+
+# Automated bisect with a test script
+git bisect start HEAD v1.0
+git bisect run make test         # script exits 0=good, 1-124/126-127=bad
+
+# Show bisect log
+git bisect log
+
+@text
+Shortlog summarizes git log output by author.
+
+@code bash
+# Commits per author
+git shortlog -sn                 # sorted by count
+git shortlog -sne                # include email
+git shortlog --since="1 month ago"
+git shortlog main..feature       # for a branch

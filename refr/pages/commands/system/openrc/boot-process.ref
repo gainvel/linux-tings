@@ -1,0 +1,172 @@
+---
+title: Boot Process
+order: 6
+description: OpenRC boot sequence, dependency ordering
+tags: [openrc, boot, boot-sequence, init, dependency-ordering]
+---
+
+The OpenRC boot sequence from kernel handoff to user login, including runlevel transitions and dependency resolution.
+
+@text
+Boot Sequence Overview
+
+@code bash
+# 1. Firmware (UEFI/BIOS) loads bootloader
+# 2. GRUB loads kernel + initramfs
+# 3. Kernel mounts root filesystem, executes /sbin/init → /sbin/openrc-init
+# 4. OpenRC processes runlevels in order:
+#
+#    sysinit  →  boot  →  default
+#
+# 5. Display manager (sddm/lightdm) starts → user login
+# 6. On shutdown:
+#
+#    shutdown  →  power off / reboot
+
+@text
+sysinit Runlevel
+
+The earliest stage, runs before any other runlevel. Handles fundamental system setup.
+
+@code bash
+# Typical sysinit services (managed by OpenRC, rarely modified):
+# devfs        — mount /dev
+# dmesg        — set dmesg log level
+# udev         — device manager (creates /dev nodes)
+# udev-trigger — replay udev events for coldplug devices
+# cgroups      — set up cgroups (v1/v2)
+# sysfs        — mount /sys
+# procfs       — mount /proc
+
+# View sysinit services
+ls /etc/runlevels/sysinit/
+rc-status -r sysinit
+
+@text
+boot Runlevel
+
+Essential services needed before normal operation.
+
+@code bash
+# Typical boot services:
+# modules      — load kernel modules from /etc/modules-load.d/
+# hwclock      — set system clock from hardware clock
+# keymaps      — load keyboard layout (/etc/conf.d/keymaps)
+# hostname     — set hostname
+# sysctl       — apply /etc/sysctl.d/ parameters
+# root         — remount root filesystem read-write
+# localmount   — mount local filesystems from /etc/fstab
+# swap         — activate swap
+# bootmisc     — miscellaneous boot tasks (cleanup /tmp, etc.)
+
+# View boot services
+ls /etc/runlevels/boot/
+rc-status -r boot
+
+@text
+default Runlevel
+
+Normal operation — user-facing services.
+
+@code bash
+# Typical default services on an Artix desktop:
+# dbus         — D-Bus message bus (required by most desktop services)
+# elogind      — seat/session management (logind replacement)
+# NetworkManager — network management
+# syslog-ng    — system logging
+# cronie       — cron daemon
+# sddm         — display manager
+# bluetoothd   — bluetooth daemon
+# cupsd        — printing
+
+# View default services
+ls /etc/runlevels/default/
+rc-status -r default
+
+@text
+shutdown Runlevel
+
+Cleanup before power off or reboot.
+
+@code bash
+# Typical shutdown services:
+# savecache    — save dependency cache
+# killprocs    — terminate remaining processes
+# mount-ro     — remount filesystems read-only
+
+# View shutdown services
+ls /etc/runlevels/shutdown/
+
+@text
+Dependency Resolution
+
+OpenRC resolves service dependencies to determine start order within each runlevel.
+
+@code bash
+# Dependency types (from init script depend() blocks):
+# need  → hard requirement, must succeed
+# use   → soft requirement, start if available
+# after → start ordering (no dependency)
+# before → reverse ordering
+# provide → virtual service alias
+
+# Example dependency chain:
+# sshd needs net → net needs localmount → localmount needs root
+# OpenRC calculates correct start order automatically
+
+# View dependency tree
+rc-service sshd describe
+
+# Parallel startup:
+# OpenRC can start independent services in parallel
+# Controlled by rc_parallel in /etc/rc.conf:
+# rc_parallel="YES"    # Enable parallel boot (faster but harder to debug)
+# rc_parallel="NO"     # Sequential boot (default, safer)
+
+@text
+Configuration — /etc/rc.conf
+
+@code bash
+# Key /etc/rc.conf settings:
+
+# rc_parallel="NO"           # Parallel service startup
+# rc_interactive="YES"       # Allow interactive boot (press 'i')
+# rc_logger="YES"            # Log boot messages to /var/log/rc.log
+# rc_log_path="/var/log/rc.log"  # Boot log location
+
+# unicode="YES"              # Enable Unicode console support
+# rc_tty_number=12           # Number of TTYs to start
+
+# rc_cgroup_mode="hybrid"    # cgroup mode: legacy, hybrid, unified
+# rc_need=""                 # Global dependencies for all services
+
+# View current config
+cat /etc/rc.conf
+
+@text
+Troubleshooting Boot
+
+@code bash
+# Boot into a minimal state (add to kernel params)
+# softlevel=single          — single-user mode (rescue)
+# softlevel=boot            — stop at boot runlevel
+# noinit                    — drop to shell before init
+
+# Enable boot logging
+# In /etc/rc.conf: rc_logger="YES"
+# Then check: /var/log/rc.log
+
+# Interactive boot — choose services one by one
+# In /etc/rc.conf: rc_interactive="YES"
+# At boot, press 'i' when prompted
+
+# Check for crashed services after boot
+rc-status -c
+
+# View boot time for each service
+rc-status -a
+
+# Manually step through boot
+sudo openrc sysinit
+sudo openrc boot
+sudo openrc default

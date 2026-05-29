@@ -1,0 +1,87 @@
+---
+title: Package Cache
+order: 6
+description: -Sc, -Scc, paccache, cache directory
+tags: [pacman, cache, clean, paccache, disk]
+---
+
+Managing the local package cache to free disk space while retaining
+rollback capability.
+
+@code bash
+# ---- cache location ----
+
+ls /var/cache/pacman/pkg/                 # default cache directory
+du -sh /var/cache/pacman/pkg/             # cache size
+
+@code bash
+# ---- pacman built-in cleanup ----
+
+pacman -Sc                                # remove uninstalled package caches
+pacman -Scc                               # remove ALL cached packages (nuclear)
+
+@text
+`pacman -Sc` removes cached packages that are no longer installed. This
+is safe but prevents downgrading to previous versions of removed packages.
+
+`pacman -Scc` removes everything from the cache, including packages you
+currently have installed. This means you cannot downgrade without
+re-downloading. Use sparingly.
+
+@code bash
+# ---- paccache: fine-grained cache control (recommended) ----
+
+# install
+pacman -S pacman-contrib
+
+# remove all but last 3 versions of each package (default)
+paccache -r
+
+# keep only last 1 version
+paccache -rk 1
+
+# remove all versions of uninstalled packages
+paccache -ruk0
+
+# dry run: show what would be removed
+paccache -d
+paccache -dk 1
+
+# show cache statistics
+paccache -v
+
+# remove packages older than 30 days (custom)
+find /var/cache/pacman/pkg/ -mtime +30 -name "*.pkg.tar.*" -delete
+
+@code bash
+# ---- automate cache cleanup ----
+
+# create a pacman hook to run paccache after every upgrade
+# /etc/pacman.d/hooks/clean_cache.hook
+
+[Trigger]
+Operation = Upgrade
+Operation = Install
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Cleaning pacman cache (keeping last 3)...
+When = PostTransaction
+Exec = /usr/bin/paccache -rk 3
+
+@code bash
+# ---- download packages without installing ----
+
+pacman -Sw package                        # download to cache only
+pacman -Sw --cachedir /tmp/pkgs package   # download to custom location
+
+# download an entire repo for offline use
+pacman -Syw $(pacman -Ssq) --cachedir /mnt/usb/pkgs/
+
+@text
+Recommendation: Use `paccache -rk 2` periodically to keep the last 2
+versions of every package. This balances disk usage against the ability
+to roll back one version if an upgrade causes problems. The pacman hook
+above automates this.

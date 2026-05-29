@@ -1,0 +1,143 @@
+---
+title: logrotate
+order: 2
+description: logrotate config, manual rotation, compression
+tags: [logrotate, log-rotation, compression, logs]
+---
+
+logrotate manages log file rotation, compression, and deletion to prevent unbounded growth.
+
+@text
+Basic Usage
+
+@code bash
+# Run logrotate manually (dry run / debug)
+sudo logrotate -d /etc/logrotate.conf
+
+# Force rotation (ignore time conditions)
+sudo logrotate -f /etc/logrotate.conf
+
+# Rotate a specific config file only
+sudo logrotate -f /etc/logrotate.d/syslog-ng
+
+# Verbose output
+sudo logrotate -v /etc/logrotate.conf
+
+# State file (tracks last rotation times)
+cat /var/lib/logrotate/logrotate.status
+
+@text
+Automatic Rotation
+
+On OpenRC/Artix, logrotate is typically run by a cron job (not a systemd timer).
+
+@code bash
+# Check if cron job exists
+cat /etc/cron.daily/logrotate
+# or
+ls /etc/cron.daily/ | grep logrotate
+
+# Typical cron entry (/etc/cron.daily/logrotate):
+# #!/bin/sh
+# /usr/sbin/logrotate /etc/logrotate.conf
+
+@text
+Configuration — /etc/logrotate.conf
+
+@code bash
+# /etc/logrotate.conf — main config with global defaults:
+#
+# weekly              — rotate weekly (daily, weekly, monthly, yearly)
+# rotate 4            — keep 4 rotated files
+# create              — create new empty file after rotation
+# dateext             — use date in rotated filename (instead of .1, .2)
+# compress            — gzip rotated files
+# include /etc/logrotate.d   — include per-app configs
+
+@text
+Per-Application Config — /etc/logrotate.d/
+
+@code bash
+# Example: /etc/logrotate.d/syslog-ng
+# /var/log/messages /var/log/auth.log /var/log/kern.log {
+#     rotate 12
+#     monthly
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     postrotate
+#         rc-service syslog-ng reload > /dev/null 2>&1 || true
+#     endscript
+# }
+
+# Example: custom application log
+# /var/log/myapp/*.log {
+#     daily
+#     rotate 7
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 myuser mygroup
+#     sharedscripts
+#     postrotate
+#         rc-service myapp reload > /dev/null 2>&1 || true
+#     endscript
+# }
+
+@text
+Key Directives
+
+@code bash
+# Rotation frequency:
+# daily, weekly, monthly, yearly
+# size 100M            — rotate when file exceeds size
+# minsize 10M          — rotate at frequency but only if >= size
+# maxsize 500M         — rotate early if file exceeds this size
+
+# Retention:
+# rotate 7             — keep 7 old copies
+# maxage 30            — delete rotated files older than N days
+
+# Compression:
+# compress             — compress rotated files (gzip)
+# delaycompress        — delay compression by one rotation cycle
+# compresscmd /usr/bin/zstd   — use a different compressor
+# compressoptions "-T0"       — compressor options
+# uncompresscmd /usr/bin/unzstd
+
+# File creation:
+# create 0640 root adm — create new log with these permissions
+# nocreate             — don't create new file
+# copytruncate         — copy then truncate (for apps that hold fd open)
+# copy                 — copy but don't truncate
+
+# Notifications:
+# notifempty           — skip rotation if file is empty
+# missingok            — don't error if log file is missing
+# ifempty              — rotate even if empty (default)
+
+# Scripts:
+# prerotate/endscript  — run before rotation
+# postrotate/endscript — run after rotation
+# sharedscripts        — run scripts once (not per matched file)
+# firstaction/endscript — run before all rotations
+# lastaction/endscript  — run after all rotations
+
+@text
+Troubleshooting
+
+@code bash
+# Debug — show what would happen without doing it
+sudo logrotate -d /etc/logrotate.d/syslog-ng
+
+# Force a specific file to rotate
+sudo logrotate -f /etc/logrotate.d/syslog-ng
+
+# Reset state (force all files to rotate next run)
+sudo rm /var/lib/logrotate/logrotate.status
+
+# Check permissions on log files
+ls -la /var/log/messages
+namei -l /var/log/messages

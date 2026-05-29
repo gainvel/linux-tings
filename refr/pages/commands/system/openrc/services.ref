@@ -1,0 +1,114 @@
+---
+title: Services
+order: 1
+description: rc-service start/stop/restart/status
+tags: [openrc, rc-service, services, start, stop, restart]
+---
+
+rc-service manages individual service operations — start, stop, restart, and status checks.
+
+@text
+Basic Service Operations
+
+@code bash
+# Start a service
+sudo rc-service sshd start
+
+# Stop a service
+sudo rc-service sshd stop
+
+# Restart a service
+sudo rc-service sshd restart
+
+# Check service status
+rc-service sshd status
+
+# Reload service config (if supported by init script)
+sudo rc-service sshd reload
+
+# Gracefully stop then start
+sudo rc-service sshd zap    # reset to stopped state (useful if crashed)
+sudo rc-service sshd start
+
+@text
+Listing Services
+
+@code bash
+# List all available services
+rc-service --list
+
+# List all services and their status
+rc-service --list | while read svc; do
+  printf "%-25s %s\n" "$svc" "$(rc-service $svc status 2>/dev/null)"
+done
+
+# Find services matching a pattern
+rc-service --list | grep -i network
+rc-service --list | grep -i ssh
+
+@text
+Service Exists Check
+
+@code bash
+# Check if a service exists (has an init script)
+rc-service --exists sshd && echo "exists" || echo "not found"
+
+# Check if a service is running
+rc-service sshd status | grep -q started && echo "running" || echo "stopped"
+
+@text
+Common Services on Artix
+
+@code bash
+# Network
+sudo rc-service NetworkManager start
+sudo rc-service connmand start
+sudo rc-service dhcpcd start
+
+# Display manager
+sudo rc-service sddm start
+sudo rc-service lightdm start
+
+# SSH
+sudo rc-service sshd start
+
+# Audio
+sudo rc-service elogind start    # seat management (needed for PulseAudio/PipeWire)
+
+# Printing
+sudo rc-service cupsd start
+
+# Bluetooth
+sudo rc-service bluetoothd start
+
+# Time sync
+sudo rc-service ntpd start
+sudo rc-service chrony start
+
+# Firewall
+sudo rc-service iptables start
+sudo rc-service nftables start
+
+# Cron
+sudo rc-service cronie start
+sudo rc-service dcron start
+
+@text
+Troubleshooting
+
+@code bash
+# If a service is "crashed" or in a bad state, zap resets it
+sudo rc-service sshd zap
+
+# Then start it fresh
+sudo rc-service sshd start
+
+# View the actual init script for a service
+cat /etc/init.d/sshd
+less /etc/init.d/sshd
+
+# Check what a service would do without running it (some scripts support)
+rc-service --dry-run sshd start
+
+# Service scripts are in /etc/init.d/
+ls /etc/init.d/

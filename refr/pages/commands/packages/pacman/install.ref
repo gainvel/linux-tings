@@ -1,0 +1,56 @@
+---
+title: Install Packages
+order: 1
+description: -S, -U, --needed, --asdeps, install from file
+tags: [pacman, install, sync]
+---
+
+Installing packages from repositories and local files.
+
+@code bash
+# ---- install from repositories (-S) ----
+
+pacman -S package                         # install package
+pacman -S package1 package2               # install multiple
+pacman -S --needed package                # skip if already installed & up to date
+pacman -S extra/package                   # install from specific repo
+pacman -S --asdeps package                # install as dependency (not explicit)
+
+# install a package group
+pacman -S base-devel                      # prompted to select members
+pacman -S --needed base-devel             # skip already-installed members
+
+# answer yes to all prompts
+pacman -S --noconfirm package             # skip confirmation
+
+@code bash
+# ---- install from file (-U) ----
+
+pacman -U /path/to/package-1.0-1-x86_64.pkg.tar.zst     # local file
+pacman -U https://example.com/package.pkg.tar.zst         # from URL
+
+# install and mark as dependency
+pacman -U --asdeps /path/to/package.pkg.tar.zst
+
+@code bash
+# ---- overwrite conflicting files ----
+
+# when a file conflict blocks installation
+pacman -S package --overwrite '/path/to/conflicting/file'
+pacman -S package --overwrite '/usr/lib/python*/site-packages/*'
+
+@code bash
+# ---- change install reason ----
+
+# mark package as explicitly installed
+pacman -D --asexplicit package
+
+# mark package as dependency
+pacman -D --asdeps package
+
+@text
+Best practices:
+- Always run `pacman -Syu` before installing new packages. Installing
+  against a stale sync database risks partial upgrades.
+- Use `--needed` when scripting installs to avoid reinstalling packages.
+- Use `--asdeps` for packages you only need as build dependencies.

@@ -1,0 +1,191 @@
+---
+title: Transform
+order: 2
+description: sed, tr, cut, paste, column
+tags: [sed, tr, cut, paste, column, transform]
+---
+
+Text transformation tools for substitution, character translation, field extraction, and formatting.
+
+@text
+sed — Stream Editor
+
+@code bash
+# Basic substitution (first occurrence per line)
+sed 's/old/new/' file.txt
+
+# Global substitution (all occurrences)
+sed 's/old/new/g' file.txt
+
+# Case-insensitive substitution
+sed 's/old/new/gI' file.txt
+
+# Edit file in place
+sed -i 's/old/new/g' file.txt
+
+# Edit in place with backup
+sed -i.bak 's/old/new/g' file.txt
+
+# Delete lines matching a pattern
+sed '/pattern/d' file.txt
+
+# Delete blank lines
+sed '/^$/d' file.txt
+
+# Delete lines by number
+sed '5d' file.txt           # delete line 5
+sed '3,7d' file.txt         # delete lines 3-7
+sed '1d' file.txt           # delete first line
+sed '$d' file.txt           # delete last line
+
+# Print only matching lines (like grep)
+sed -n '/pattern/p' file.txt
+
+# Print line range
+sed -n '10,20p' file.txt
+
+# Insert/append text
+sed '3i\New line above line 3' file.txt    # insert before
+sed '3a\New line below line 3' file.txt    # append after
+sed '1i\Header line' file.txt              # add header
+
+# Replace entire line matching a pattern
+sed '/^#server/c\server = 192.168.1.1' config.txt
+
+# Multiple operations
+sed -e 's/foo/bar/g' -e 's/baz/qux/g' file.txt
+
+# Use different delimiter (useful for paths)
+sed 's|/usr/local|/opt|g' file.txt
+sed 's#old#new#g' file.txt
+
+# Capture groups
+sed 's/\(.*\)=\(.*\)/\2=\1/' file.txt           # swap around =
+sed -E 's/([0-9]+)-([0-9]+)/\2-\1/g' file.txt   # extended regex
+
+# Remove leading/trailing whitespace
+sed 's/^[[:space:]]*//' file.txt           # leading
+sed 's/[[:space:]]*$//' file.txt           # trailing
+sed 's/^[[:space:]]*//;s/[[:space:]]*$//' file.txt  # both
+
+# Add prefix/suffix to every line
+sed 's/^/PREFIX: /' file.txt
+sed 's/$/ :SUFFIX/' file.txt
+
+@text
+tr — Translate Characters
+
+@code bash
+# Replace characters (one-to-one mapping)
+echo "hello" | tr 'a-z' 'A-Z'          # HELLO
+echo "HELLO" | tr 'A-Z' 'a-z'          # hello
+
+# Delete characters
+echo "hello 123 world" | tr -d '0-9'   # hello  world
+echo "hello" | tr -d 'aeiou'           # hll
+
+# Squeeze repeated characters
+echo "heeellooo" | tr -s 'a-z'         # helo
+
+# Replace newlines with spaces (join lines)
+tr '\n' ' ' < file.txt
+
+# Replace spaces with newlines (split into lines)
+tr ' ' '\n' < file.txt
+
+# Delete non-printable characters
+tr -cd '[:print:]\n' < file.txt
+
+# Replace characters not in set (complement)
+echo "hello123" | tr -cd '0-9\n'       # 123
+
+# DOS to Unix line endings
+tr -d '\r' < dos-file.txt > unix-file.txt
+
+# Character classes:
+# [:alpha:]  letters
+# [:digit:]  digits
+# [:alnum:]  letters and digits
+# [:space:]  whitespace
+# [:upper:]  uppercase
+# [:lower:]  lowercase
+# [:print:]  printable characters
+# [:punct:]  punctuation
+
+@text
+cut — Extract Fields/Columns
+
+@code bash
+# Cut by delimiter and field number
+cut -d: -f1 /etc/passwd            # usernames
+cut -d: -f1,3 /etc/passwd          # username and UID
+cut -d, -f2 data.csv               # second CSV column
+
+# Cut by character position
+cut -c1-10 file.txt                # first 10 characters
+cut -c5- file.txt                  # character 5 to end
+cut -c-20 file.txt                 # first 20 characters
+
+# Cut by byte position
+cut -b1-4 file.txt
+
+# Use tab delimiter (default)
+cut -f1,3 data.tsv
+
+# Multiple fields
+cut -d: -f1,3,5-7 /etc/passwd
+
+# Complement (show everything except specified fields)
+cut -d: --complement -f2 /etc/passwd
+
+# Change output delimiter
+cut -d: -f1,3 --output-delimiter='  ' /etc/passwd
+
+@text
+paste — Merge Lines/Files
+
+@code bash
+# Merge files side by side (tab-delimited)
+paste file1.txt file2.txt
+
+# Custom delimiter
+paste -d, file1.txt file2.txt
+paste -d'|' file1.txt file2.txt
+
+# Merge consecutive lines from one file
+paste - - < file.txt              # pairs of lines
+paste - - - < file.txt            # triples
+
+# Convert column to row (join all lines)
+paste -s -d, file.txt             # one,two,three,...
+
+# Combine with cut for column reordering
+cut -d, -f1 data.csv > /tmp/col1
+cut -d, -f3 data.csv > /tmp/col3
+paste -d, /tmp/col1 /tmp/col3     # columns 1 and 3
+
+@text
+column — Format into Columns
+
+@code bash
+# Auto-format into aligned columns
+column -t file.txt
+
+# Specify delimiter
+column -t -s: /etc/passwd
+column -t -s, data.csv
+
+# Set output separator
+column -t -s: -o '  |  ' /etc/passwd
+
+# Format a list into multiple columns
+ls /usr/bin | column
+
+# JSON table formatting (util-linux 2.37+)
+column -t -s, --table-columns "Name,Age,City" data.csv
+
+# Right-align specific columns
+column -t -s, --table-right 2 data.csv
+
+# Wrap long columns
+column -t -s, --table-wrap 3 data.csv

@@ -1,0 +1,8 @@
+---
+title: Users & Groups
+order: 10
+description: Users, groups, and privileges
+tags: [users, groups, sudo, permissions, accounts]
+---
+
+User and group management, privilege escalation with sudo, and account information.

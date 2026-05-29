@@ -1,0 +1,91 @@
+---
+title: Status
+order: 3
+description: rc-status, dependency info
+tags: [openrc, rc-status, status, dependencies]
+---
+
+rc-status shows the state of services across runlevels and their dependency relationships.
+
+@text
+Viewing Status
+
+@code bash
+# Show all services in the current runlevel with status
+rc-status
+
+# Show all runlevels and their services
+rc-status -a
+
+# Show only crashed/stopped services
+rc-status -c
+
+# Show services in a specific runlevel
+rc-status -r default
+rc-status -r boot
+
+# Show manually started services (not in any runlevel)
+rc-status -m
+
+# Show unused services (not started, not in any runlevel)
+rc-status -u
+
+@text
+Service States
+
+@code bash
+# Possible states shown by rc-status:
+# [ started  ]   — service is running
+# [ stopped  ]   — service is not running
+# [ crashed  ]   — service was running but is no longer (process died)
+# [ starting ]   — service is in the process of starting
+# [ stopping ]   — service is in the process of stopping
+# [ inactive ]   — service is not enabled in any runlevel
+
+@text
+Dependency Information
+
+@code bash
+# Show dependency tree for a specific service
+rc-service sshd describe
+
+# List what a service needs, uses, and provides
+grep -A20 "^depend" /etc/init.d/sshd
+
+# Common dependency keywords in init scripts:
+# need  — hard dependency, must be running (fails if dep fails)
+# use   — soft dependency, start if available (won't fail)
+# after — ordering only, start after this service
+# before — ordering only, start before this service
+# provide — virtual service name this script provides
+# keyword — special flags (nonet, nojail, etc.)
+
+# Example depend() block:
+# depend() {
+#     need net
+#     use dns logger
+#     after firewall
+# }
+
+# Check service dependency tree with rc-service
+rc-service sshd describe
+
+@text
+Practical Status Checks
+
+@code bash
+# Quick check: is anything crashed?
+rc-status -c
+# Empty output means all services in their expected state
+
+# Find services that are started but not in any runlevel
+rc-status -m
+
+# Overview of system state
+rc-status -a 2>/dev/null | grep -E "started|stopped|crashed"
+
+# Count running services
+rc-status | grep -c "started"
+
+# Find which runlevel a service belongs to
+rc-update show | grep sshd

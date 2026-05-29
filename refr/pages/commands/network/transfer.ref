@@ -1,0 +1,134 @@
+---
+title: File Transfer
+order: 6
+description: curl, wget, rsync (remote transfers)
+tags: [curl, wget, rsync, download, upload, transfer, http]
+---
+
+Tools for downloading, uploading, and synchronizing files over the network.
+For rsync over SSH, see also ssh/transfer.
+
+@code bash
+# ---- curl: transfer data with URLs ----
+
+# basic downloads
+curl https://example.com                         # output to stdout
+curl -o file.html https://example.com            # save to file
+curl -O https://example.com/file.tar.gz          # save with remote filename
+curl -OL https://example.com/file.tar.gz         # follow redirects + save
+curl -C - -O https://example.com/large.iso       # resume interrupted download
+
+# HTTP methods
+curl -X GET https://api.example.com/data
+curl -X POST https://api.example.com/data -d '{"key":"val"}' -H 'Content-Type: application/json'
+curl -X PUT https://api.example.com/data/1 -d '{"key":"new"}'
+curl -X DELETE https://api.example.com/data/1
+curl -X PATCH https://api.example.com/data/1 -d '{"key":"patched"}'
+
+# headers and auth
+curl -H 'Authorization: Bearer TOKEN' https://api.example.com
+curl -H 'Accept: application/json' https://api.example.com
+curl -u user:password https://example.com         # basic auth
+curl --negotiate -u : https://example.com         # Kerberos
+
+# POST data
+curl -d "name=foo&value=bar" https://example.com/form        # form-urlencoded
+curl -F "file=@photo.jpg" https://example.com/upload          # multipart file upload
+curl -F "file=@photo.jpg;type=image/jpeg" https://example.com/upload
+curl -d @data.json -H 'Content-Type: application/json' https://api.example.com
+
+# useful options
+curl -s https://example.com                       # silent (no progress)
+curl -sS https://example.com                      # silent but show errors
+curl -v https://example.com                       # verbose (debug)
+curl -I https://example.com                       # HEAD request (headers only)
+curl -w '%{http_code}\n' -o /dev/null -s https://example.com    # status code only
+curl -w '%{time_total}\n' -o /dev/null -s https://example.com   # response time
+curl -k https://self-signed.example.com           # ignore SSL errors
+curl -L https://example.com                       # follow redirects
+curl --max-time 10 https://example.com            # timeout
+curl --retry 3 https://example.com                # retry on failure
+
+# download multiple files
+curl -O https://example.com/file1.txt -O https://example.com/file2.txt
+curl -K urls.txt                                  # read options from file
+
+@code bash
+# ---- wget: non-interactive downloader ----
+
+# basic downloads
+wget https://example.com/file.tar.gz              # download to current dir
+wget -O output.html https://example.com            # save with specific name
+wget -O - https://example.com                      # output to stdout
+wget -c https://example.com/large.iso              # resume download
+wget -q https://example.com/file.tar.gz            # quiet mode
+wget -b https://example.com/large.iso              # background download
+
+# recursive download
+wget -r https://example.com/                       # recursive (mirror)
+wget -r -l 2 https://example.com/                  # limit depth to 2
+wget -m https://example.com/                       # mirror mode (-r -N -l inf)
+wget -r -np https://example.com/docs/              # no parent directory
+wget -r -A "*.pdf" https://example.com/            # accept only PDFs
+wget -r -R "*.html" https://example.com/           # reject HTML files
+
+# authentication
+wget --user=admin --password=secret https://example.com/protected
+wget --header='Authorization: Bearer TOKEN' https://api.example.com
+
+# other options
+wget --limit-rate=200k https://example.com/file    # throttle download
+wget -i urls.txt                                    # download URLs from file
+wget --no-check-certificate https://self-signed.example.com
+wget --spider https://example.com                  # check if URL exists (no download)
+wget -t 5 https://example.com/file                 # retry 5 times
+wget -w 2 -r https://example.com/                  # wait 2s between requests
+
+@code bash
+# ---- rsync: efficient file synchronization ----
+
+# remote transfers (SSH is default transport)
+rsync -avz /local/path/ user@host:/remote/path/         # push to remote
+rsync -avz user@host:/remote/path/ /local/path/         # pull from remote
+rsync -avz -e 'ssh -p 2222' src/ user@host:/dest/       # custom SSH port
+
+# common flags
+# -a  archive mode (recursive, preserves permissions/times/symlinks/owner/group)
+# -v  verbose
+# -z  compress during transfer
+# -P  --partial --progress (resume + show progress)
+# -n  dry run (show what would be done)
+# -h  human-readable sizes
+
+rsync -avzP /local/path/ user@host:/remote/path/        # archive + progress
+rsync -avzn /local/path/ user@host:/remote/path/        # dry run first
+
+# trailing slash matters!
+rsync -avz src/ dest/                     # contents of src into dest
+rsync -avz src dest/                      # src directory into dest (creates dest/src/)
+
+# delete files on dest that don't exist on source
+rsync -avz --delete src/ dest/
+rsync -avz --delete-after src/ dest/      # delete after transfer
+
+# exclude patterns
+rsync -avz --exclude='*.log' src/ dest/
+rsync -avz --exclude='.git' --exclude='node_modules' src/ dest/
+rsync -avz --exclude-from='excludes.txt' src/ dest/
+rsync -avz --include='*.c' --exclude='*' src/ dest/     # only .c files
+
+# bandwidth limit
+rsync -avz --bwlimit=1000 src/ dest/      # limit to 1000 KB/s
+
+# rsync daemon (not over SSH)
+rsync -avz rsync://mirror.example.com/repo /local/mirror/
+
+@text
+Key differences:
+- curl supports many protocols (HTTP, FTP, SMTP, etc.) and is best for
+  API interaction and single-file transfers.
+- wget excels at recursive downloads and mirroring websites.
+- rsync is best for synchronizing directory trees efficiently, as it
+  only transfers differences (delta encoding).
+
+All three can resume interrupted downloads (curl -C -, wget -c, rsync --partial).

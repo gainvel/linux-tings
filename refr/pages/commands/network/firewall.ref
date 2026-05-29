@@ -1,0 +1,179 @@
+---
+title: Firewall
+order: 4
+description: iptables, ip6tables, nftables, basic chains and rules
+tags: [firewall, iptables, nftables, ip6tables, netfilter]
+---
+
+Linux firewall tools. nftables is the modern successor to iptables. Both
+use the Netfilter framework in the kernel. On Artix, neither runs by
+default; you must enable them via OpenRC services.
+
+@code bash
+# ---- iptables: traditional packet filtering ----
+
+# list rules
+iptables -L                               # list all chains
+iptables -L -n -v                         # numeric, verbose
+iptables -L -n --line-numbers             # with rule numbers
+iptables -t nat -L -n -v                  # NAT table
+iptables -t mangle -L -n -v              # mangle table
+iptables -S                               # dump rules as commands
+
+@code bash
+# default policies
+iptables -P INPUT DROP                    # drop incoming by default
+iptables -P FORWARD DROP                  # drop forwarded by default
+iptables -P OUTPUT ACCEPT                 # allow outgoing by default
+
+@code bash
+# basic rules
+# allow loopback
+iptables -A INPUT -i lo -j ACCEPT
+
+# allow established/related connections
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# allow SSH
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+
+# allow HTTP/HTTPS
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+
+# allow ping
+iptables -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+
+# allow from specific subnet
+iptables -A INPUT -s 192.168.1.0/24 -j ACCEPT
+
+# drop and log
+iptables -A INPUT -j LOG --log-prefix "iptables-drop: "
+iptables -A INPUT -j DROP
+
+@code bash
+# rule management
+iptables -D INPUT 3                       # delete rule by number
+iptables -D INPUT -p tcp --dport 80 -j ACCEPT   # delete by spec
+iptables -I INPUT 1 -p tcp --dport 22 -j ACCEPT # insert at position
+iptables -R INPUT 1 -p tcp --dport 22 -j ACCEPT # replace rule 1
+iptables -F                               # flush all rules
+iptables -X                               # delete user-defined chains
+iptables -Z                               # zero packet counters
+
+@code bash
+# NAT / port forwarding
+# enable IP forwarding first
+echo 1 > /proc/sys/net/ipv4/ip_forward
+# or persistently in /etc/sysctl.d/99-sysctl.conf:
+# net.ipv4.ip_forward = 1
+
+# masquerade (typical for NAT gateway)
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+# port forward: external:8080 -> internal:80
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 8080 -j DNAT --to 192.168.1.10:80
+iptables -A FORWARD -p tcp -d 192.168.1.10 --dport 80 -j ACCEPT
+
+@code bash
+# save and restore
+iptables-save > /etc/iptables/iptables.rules
+iptables-restore < /etc/iptables/iptables.rules
+
+# ip6tables works identically for IPv6
+ip6tables -L -n -v
+ip6tables -A INPUT -p tcp --dport 22 -j ACCEPT
+ip6tables-save > /etc/iptables/ip6tables.rules
+
+# OpenRC service
+rc-service iptables save
+rc-service iptables start
+rc-update add iptables default
+
+@text
+nftables is the replacement for iptables. It has a cleaner syntax, better
+performance, and combines IPv4/IPv6 in a single framework.
+
+@code bash
+# ---- nftables ----
+
+# list everything
+nft list ruleset                          # full ruleset
+nft list tables                           # list tables
+nft list table inet filter                # specific table
+nft list chain inet filter input          # specific chain
+
+@code bash
+# create a basic firewall
+nft add table inet filter
+nft add chain inet filter input '{ type filter hook input priority 0; policy drop; }'
+nft add chain inet filter forward '{ type filter hook forward priority 0; policy drop; }'
+nft add chain inet filter output '{ type filter hook output priority 0; policy accept; }'
+
+# add rules
+nft add rule inet filter input iif lo accept
+nft add rule inet filter input ct state established,related accept
+nft add rule inet filter input tcp dport 22 accept
+nft add rule inet filter input tcp dport {80, 443} accept
+nft add rule inet filter input ip saddr 192.168.1.0/24 accept
+nft add rule inet filter input icmp type echo-request accept
+nft add rule inet filter input counter drop
+
+@code bash
+# nftables config file approach (preferred)
+# /etc/nftables.conf
+
+#!/usr/sbin/nft -f
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+        iif lo accept
+        ct state established,related accept
+        tcp dport 22 accept
+        tcp dport { 80, 443 } accept
+        ip saddr 192.168.1.0/24 accept
+        icmp type echo-request accept
+        counter drop
+    }
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}
+
+@code bash
+# nftables NAT
+nft add table inet nat
+nft add chain inet nat postrouting '{ type nat hook postrouting priority 100; }'
+nft add chain inet nat prerouting '{ type nat hook prerouting priority -100; }'
+nft add rule inet nat postrouting oifname "eth0" masquerade
+nft add rule inet nat prerouting iifname "eth0" tcp dport 8080 dnat to 192.168.1.10:80
+
+@code bash
+# rule management
+nft delete rule inet filter input handle 7    # delete by handle
+nft -a list chain inet filter input           # show handles
+nft insert rule inet filter input position 3 tcp dport 22 accept
+nft flush chain inet filter input             # flush chain
+nft flush ruleset                             # flush everything
+nft delete table inet filter                  # delete table
+
+# save and load
+nft list ruleset > /etc/nftables.conf
+nft -f /etc/nftables.conf                     # load from file
+
+# OpenRC service
+rc-service nftables start
+rc-update add nftables default
+
+@text
+Do not run iptables and nftables simultaneously. They share the same
+Netfilter hooks and will conflict. Choose one.
+
+iptables-nft is a compatibility layer that translates iptables commands
+to nftables rules. On Artix, the iptables package may be iptables-nft
+by default. Check with: `iptables --version` (look for "nf_tables").

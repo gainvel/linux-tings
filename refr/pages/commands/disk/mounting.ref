@@ -1,0 +1,164 @@
+---
+title: Mounting
+order: 3
+description: Mounting filesystems, fstab, bind mounts, tmpfs
+tags: [disk, mount, umount, fstab, findmnt, bind, tmpfs]
+---
+
+Mounting attaches a filesystem to a directory in the VFS tree. Managed through mount/umount commands and persisted via /etc/fstab.
+
+@text
+Basic mount and umount operations.
+
+@code bash
+# Mount a device to a directory
+sudo mount /dev/sda1 /mnt
+
+# Mount with specific filesystem type
+sudo mount -t ext4 /dev/sda1 /mnt
+
+# Mount read-only
+sudo mount -o ro /dev/sda1 /mnt
+
+# Remount read-write (without unmounting)
+sudo mount -o remount,rw /mnt
+
+# Mount with specific options
+sudo mount -o noatime,nodiratime /dev/sda1 /mnt
+
+# Mount by UUID (preferred over device names)
+sudo mount UUID=a1b2c3d4-e5f6-7890-abcd-ef1234567890 /mnt
+
+# Mount by label
+sudo mount LABEL=data /mnt
+
+# Unmount by mountpoint
+sudo umount /mnt
+
+# Unmount by device
+sudo umount /dev/sda1
+
+# Force unmount (use when device is busy)
+sudo umount -f /mnt
+
+# Lazy unmount (detach now, clean up when not busy)
+sudo umount -l /mnt
+
+# See what process is using a mountpoint
+sudo fuser -vm /mnt
+lsof +f -- /mnt
+
+@text
+Inspect current mounts with findmnt.
+
+@code bash
+# Show all mounts in tree format
+findmnt
+
+# Show only real filesystems (no pseudo/virtual)
+findmnt -t ext4,btrfs,xfs,vfat
+
+# Find where a device is mounted
+findmnt /dev/sda1
+
+# Find what is mounted at a path
+findmnt /mnt
+
+# Show as flat list with specific columns
+findmnt -l -o TARGET,SOURCE,FSTYPE,OPTIONS
+
+# Show only mounts from fstab
+findmnt --fstab
+
+# Check if a path is a mountpoint
+findmnt --mountpoint /mnt && echo "is a mountpoint"
+
+# Watch for mount/unmount events
+findmnt --poll
+
+@text
+/etc/fstab — persistent mount configuration. Each line defines a mount.
+
+@code bash
+# fstab format:
+# <device>    <mountpoint>    <type>    <options>    <dump>  <fsck-order>
+
+# Root filesystem
+UUID=xxxx-xxxx   /           ext4   defaults,noatime           0  1
+
+# EFI system partition
+UUID=ABCD-1234   /boot/efi   vfat   defaults,umask=0077        0  2
+
+# Data partition
+UUID=xxxx-xxxx   /data       ext4   defaults,noatime,nofail    0  2
+
+# Swap partition
+UUID=xxxx-xxxx   none        swap   defaults                   0  0
+
+# Mount all entries in fstab
+sudo mount -a
+
+# Test fstab without actually mounting (findmnt --verify)
+findmnt --verify
+
+# Key options:
+#   defaults    = rw,suid,dev,exec,auto,nouser,async
+#   noatime     = don't update access times (performance)
+#   nofail      = don't fail boot if device is missing
+#   noexec      = prevent execution of binaries
+#   nosuid      = ignore SUID/SGID bits
+#   nodev       = ignore device files
+#   ro          = read-only
+#   x-systemd.automount  = mount on first access (systemd)
+
+@text
+Bind mounts — mount a directory to another location.
+
+@code bash
+# Create a bind mount
+sudo mount --bind /source/dir /target/dir
+
+# Read-only bind mount (requires remount)
+sudo mount --bind /source/dir /target/dir
+sudo mount -o remount,ro,bind /target/dir
+
+# Persistent bind mount in fstab
+# /source/dir   /target/dir   none   bind   0  0
+
+# Recursive bind mount (includes sub-mounts)
+sudo mount --rbind /source/dir /target/dir
+
+@text
+tmpfs — in-memory filesystem.
+
+@code bash
+# Mount a tmpfs with a size limit
+sudo mount -t tmpfs -o size=2G tmpfs /mnt/ramdisk
+
+# tmpfs in fstab
+# tmpfs   /tmp   tmpfs   defaults,size=4G,noatime,mode=1777   0  0
+
+# tmpfs for build directories (fast compilation)
+sudo mount -t tmpfs -o size=8G tmpfs /home/user/build
+
+@text
+Mount loop devices and ISO images.
+
+@code bash
+# Mount an ISO image
+sudo mount -o loop image.iso /mnt/iso
+
+# Mount a disk image file
+sudo mount -o loop,offset=1048576 disk.img /mnt/disk
+
+# Create and mount a file-backed filesystem
+dd if=/dev/zero of=disk.img bs=1M count=512
+sudo mkfs.ext4 disk.img
+sudo mount -o loop disk.img /mnt/disk
+
+# List loop devices
+losetup -l
+
+# Set up a loop device manually
+sudo losetup /dev/loop0 disk.img
+sudo mount /dev/loop0 /mnt/disk

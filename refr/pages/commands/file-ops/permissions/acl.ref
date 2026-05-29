@@ -1,0 +1,144 @@
+---
+title: ACLs
+order: 3
+description: POSIX Access Control Lists — getfacl, setfacl
+tags: [permissions, acl, getfacl, setfacl]
+---
+
+POSIX ACLs extend traditional Unix permissions by allowing fine-grained access rules for specific users and groups beyond the single owner/group/others model. Requires filesystem support (ext4, xfs, btrfs all support ACLs).
+
+@text
+Check and enable ACL support.
+
+@code bash
+# Check if filesystem is mounted with ACL support
+mount | grep acl
+
+# Most modern filesystems enable ACLs by default
+# If not, remount with acl option
+sudo mount -o remount,acl /dev/sda1 /mnt
+
+# In fstab, add acl to options if needed (usually unnecessary for ext4/xfs)
+# UUID=xxx  /data  ext4  defaults,acl  0  2
+
+@text
+getfacl — view Access Control Lists.
+
+@code bash
+# Show ACL for a file
+getfacl file.txt
+
+# Example output:
+# # file: file.txt
+# # owner: alice
+# # group: users
+# user::rw-
+# user:bob:r--
+# group::r--
+# group:devs:rw-
+# mask::rw-
+# other::r--
+
+# Show ACL for a directory
+getfacl /shared/project
+
+# Show ACL without comments (no owner/group header)
+getfacl --omit-header file.txt
+
+# Recursive
+getfacl -R /shared/project
+
+# Show only default ACL (directories)
+getfacl -d /shared/project
+
+# Tabular output
+getfacl -t file.txt
+
+# Backup ACLs to a file
+getfacl -R /shared > acl-backup.txt
+
+@text
+setfacl — set Access Control Lists.
+
+@code bash
+# Grant a specific user read access
+setfacl -m u:bob:r file.txt
+
+# Grant a specific user read+write
+setfacl -m u:bob:rw file.txt
+
+# Grant a specific group read+write+execute
+setfacl -m g:developers:rwx project/
+
+# Set permissions for multiple entries at once
+setfacl -m u:bob:rw,u:carol:r,g:devs:rwx file.txt
+
+# Remove a specific user's ACL entry
+setfacl -x u:bob file.txt
+
+# Remove a specific group's ACL entry
+setfacl -x g:developers file.txt
+
+# Remove all ACL entries (revert to standard permissions)
+setfacl -b file.txt
+
+# Remove all default ACL entries from a directory
+setfacl -k directory/
+
+# Apply ACL recursively
+setfacl -R -m g:developers:rwx /shared/project/
+
+# Copy ACL from one file to another
+getfacl source.txt | setfacl --set-file=- target.txt
+
+# Restore ACLs from backup
+setfacl --restore=acl-backup.txt
+
+@text
+Default ACLs — set on directories. New files and subdirectories automatically inherit these permissions.
+
+@code bash
+# Set default ACL on a directory (inherited by new files)
+setfacl -d -m u:bob:rw /shared/project/
+setfacl -d -m g:developers:rwx /shared/project/
+
+# Set both access and default ACL at once
+setfacl -m u:bob:rw /shared/project/
+setfacl -d -m u:bob:rw /shared/project/
+
+# Show default ACL
+getfacl -d /shared/project/
+
+# Remove all default ACLs
+setfacl -k /shared/project/
+
+# Practical setup: shared project directory
+sudo mkdir /shared/project
+sudo chgrp developers /shared/project
+sudo chmod 2770 /shared/project
+sudo setfacl -d -m g:developers:rwx /shared/project/
+sudo setfacl -d -m o::--- /shared/project/
+
+@text
+The ACL mask — the maximum effective permissions for named users, named groups, and the owning group. Automatically recalculated when you modify ACLs.
+
+@code bash
+# Set mask explicitly (limits all named user/group ACL entries)
+setfacl -m m::rx file.txt
+
+# After chmod on a file with ACLs, the mask may change
+# chmod affects the mask, not the group entry
+chmod 640 file.txt    # sets mask to r-- (may reduce effective ACL perms)
+
+# Check effective permissions (shown in getfacl output)
+getfacl file.txt
+# user:bob:rw-    #effective:r--   <-- mask limits bob to r
+
+@text
+The '+' indicator in ls output signals ACLs are present.
+
+@code bash
+# A '+' after permissions indicates ACLs
+ls -l file.txt
+# -rw-r--r--+ 1 alice users 0 Jan 15 12:00 file.txt
+#           ^ ACL present

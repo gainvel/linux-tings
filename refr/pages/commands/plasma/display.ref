@@ -1,0 +1,150 @@
+---
+title: Display & Monitors
+order: 4
+description: xrandr, kscreen-doctor, multi-monitor, DPI/scaling
+tags: [display, monitor, xrandr, kscreen, dpi, scaling, multi-monitor]
+---
+
+Display management tools for X11 (xrandr) and Plasma's native kscreen-doctor.
+
+@text
+xrandr — X11 Display Configuration
+
+@code bash
+# List all outputs and supported modes
+xrandr
+
+# List outputs with verbose mode details
+xrandr --verbose
+
+# Set resolution for a specific output
+xrandr --output HDMI-1 --mode 1920x1080
+
+# Set resolution and refresh rate
+xrandr --output HDMI-1 --mode 2560x1440 --rate 144
+
+# Enable a second monitor to the right of primary
+xrandr --output HDMI-1 --mode 1920x1080 --right-of eDP-1
+
+# Mirror displays
+xrandr --output HDMI-1 --same-as eDP-1
+
+# Set primary display
+xrandr --output eDP-1 --primary
+
+# Disable an output
+xrandr --output HDMI-1 --off
+
+# Rotate a display
+xrandr --output HDMI-1 --rotate left    # left, right, inverted, normal
+
+# Set a custom mode (add modeline)
+cvt 1920 1080 60                        # generate modeline
+xrandr --newmode "1920x1080_60" 173.00 1920 2048 2248 2576 1080 1083 1088 1120 -hsync +vsync
+xrandr --addmode HDMI-1 "1920x1080_60"
+xrandr --output HDMI-1 --mode "1920x1080_60"
+
+# Set brightness (software, 0.0-1.0)
+xrandr --output eDP-1 --brightness 0.8
+
+@text
+kscreen-doctor — Plasma Native Display Tool
+
+Works with both X11 and Wayland sessions. Respects Plasma's display configuration.
+
+@code bash
+# Show current display configuration
+kscreen-doctor --outputs
+
+# Enable an output at a specific mode
+kscreen-doctor output.HDMI-1.enable output.HDMI-1.mode.1920x1080@60
+
+# Disable an output
+kscreen-doctor output.HDMI-1.disable
+
+# Set position (x,y from top-left)
+kscreen-doctor output.HDMI-1.position.1920,0
+
+# Set as primary
+kscreen-doctor output.eDP-1.primary
+
+# Set rotation
+kscreen-doctor output.HDMI-1.rotation.left   # none, left, right, inverted
+
+# Set scale (Wayland)
+kscreen-doctor output.eDP-1.scale.1.5
+
+# Combined: enable, position, and set mode
+kscreen-doctor output.HDMI-1.enable \
+  output.HDMI-1.mode.2560x1440@144 \
+  output.HDMI-1.position.1920,0
+
+@text
+DPI and Scaling
+
+Configure HiDPI scaling for Plasma and applications.
+
+@code bash
+# Set global scale factor (Plasma 5, integer scaling)
+kwriteconfig5 --file kdeglobals --group KScreen --key ScaleFactor 2
+
+# Set per-screen Wayland scaling (Plasma 6 supports fractional)
+kscreen-doctor output.eDP-1.scale.1.25
+
+# Force-set DPI for X11
+xrandr --dpi 192
+
+# Set font DPI (affects font rendering size)
+kwriteconfig5 --file kcmfonts --group General --key forceFontDPI 144
+
+# Environment variables for app scaling
+# Add to ~/.xprofile or ~/.profile:
+# export QT_AUTO_SCREEN_SCALE_FACTOR=1     # Qt apps auto-detect
+# export QT_SCALE_FACTOR=1.5               # Force Qt scale
+# export GDK_SCALE=2                        # GTK integer scale
+# export GDK_DPI_SCALE=0.5                  # GTK DPI compensation
+# export PLASMA_USE_QT_SCALING=1            # Plasma 6 fractional
+
+@text
+Multi-Monitor Layout
+
+@code bash
+# Common layouts with xrandr:
+# Side-by-side (laptop left, external right)
+xrandr --output eDP-1 --primary --mode 1920x1080 --pos 0x0 \
+       --output HDMI-1 --mode 2560x1440 --pos 1920x0
+
+# Stacked (external above laptop)
+xrandr --output eDP-1 --primary --mode 1920x1080 --pos 0x1440 \
+       --output HDMI-1 --mode 2560x1440 --pos 0x0
+
+# Only external (laptop lid closed)
+xrandr --output eDP-1 --off --output HDMI-1 --primary --auto
+
+# Plasma saves display configs per connected set:
+# ~/.local/share/kscreen/   — stored layouts, auto-applied on connect
+
+# Force reload saved kscreen config
+kscreen-doctor --dpms on
+
+@text
+DPMS — Display Power Management
+
+@code bash
+# Check DPMS status
+xset q | grep -A5 "DPMS"
+
+# Turn off display immediately
+xset dpms force off
+
+# Turn on display
+xset dpms force on
+
+# Set standby/suspend/off timeouts (seconds)
+xset dpms 300 600 900
+
+# Disable DPMS entirely
+xset -dpms
+
+# Prevent screen blanking
+xset s off s noblank

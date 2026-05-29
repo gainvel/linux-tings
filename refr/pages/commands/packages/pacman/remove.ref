@@ -1,0 +1,63 @@
+---
+title: Remove Packages
+order: 2
+description: -R, -Rs, -Rns, -Rdd, orphan cleanup
+tags: [pacman, remove, uninstall, orphan]
+---
+
+Removing packages and cleaning up orphaned dependencies.
+
+@code bash
+# ---- basic removal ----
+
+pacman -R package                         # remove package only
+pacman -Rs package                        # remove + unneeded dependencies
+pacman -Rns package                       # remove + deps + config files (clean)
+pacman -Rn package                        # remove + config files, keep deps
+pacman -Rsu package                       # remove + deps, skip if others need them
+
+@text
+`-Rns` is the recommended removal command. It removes the package, its
+orphaned dependencies, and any backup config files (pacnew/pacsave).
+
+@code bash
+# ---- force removal (dangerous) ----
+
+# skip dependency checks (breaks things!)
+pacman -Rdd package                       # remove even if others depend on it
+
+@text
+Using `-Rdd` can leave your system in a broken state. Only use it if you
+know exactly what you are doing and plan to immediately install a
+replacement.
+
+@code bash
+# ---- orphan management ----
+
+# list orphaned packages (installed as deps, nothing depends on them)
+pacman -Qdt
+
+# list all unrequired packages (orphans + optional deps)
+pacman -Qdtt
+
+# remove all orphans
+pacman -Rns $(pacman -Qdtq)
+
+# remove all orphans (safe version, handles empty result)
+orphans=$(pacman -Qdtq)
+if [ -n "$orphans" ]; then
+    pacman -Rns $orphans
+else
+    echo "No orphans found"
+fi
+
+@text
+After removing packages, check for orphans periodically. Dependencies
+pulled in by removed packages often linger. A clean system has no output
+from `pacman -Qdt`.
+
+@code bash
+# ---- check what depends on a package before removing ----
+
+pacman -Qi package | grep "Required By"   # direct dependents
+pactree -r package                        # full reverse dependency tree

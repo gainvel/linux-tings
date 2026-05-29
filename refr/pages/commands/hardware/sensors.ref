@@ -1,0 +1,87 @@
+---
+title: Sensors
+order: 2
+description: Temperature, fan, and voltage monitoring
+tags: [hardware, sensors, lm_sensors, hwmon, temperature, fans]
+---
+
+lm_sensors provides userspace tools for reading hardware monitoring
+chips (temperature, voltage, fan speed) via the hwmon kernel subsystem.
+
+@code bash
+# Install lm_sensors
+sudo pacman -S lm_sensors
+
+# Detect sensor chips (interactive, run once after install)
+sudo sensors-detect
+# Answering YES loads the needed kernel modules
+# Adds modules to /etc/modules-load.d/ for persistence
+
+# Read all sensor values
+sensors
+# Output example:
+# coretemp-isa-0000
+#   Core 0:  +45.0 C  (high = +80.0 C, crit = +100.0 C)
+#   Core 1:  +43.0 C  (high = +80.0 C, crit = +100.0 C)
+
+# Specific chip
+sensors coretemp-isa-0000
+sensors -j                       # JSON output
+sensors -u                       # raw values (for scripting)
+sensors -A                       # no adapter type header
+
+@text
+Continuous monitoring and threshold configuration.
+
+@code bash
+# Watch sensors in real time
+watch -n 1 sensors               # update every second
+
+# GPU temperature (NVIDIA)
+nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader
+
+# GPU temperature (AMD/Intel via hwmon)
+cat /sys/class/hwmon/hwmon*/temp1_input   # millidegrees Celsius
+
+@text
+The hwmon sysfs interface at /sys/class/hwmon/ exposes raw sensor data.
+Each hwmon device has numbered attributes.
+
+@code bash
+# Browse hwmon devices
+ls /sys/class/hwmon/
+cat /sys/class/hwmon/hwmon0/name          # chip name
+
+# Temperature (values in millidegrees Celsius)
+cat /sys/class/hwmon/hwmon0/temp1_input   # current temp
+cat /sys/class/hwmon/hwmon0/temp1_max     # max threshold
+cat /sys/class/hwmon/hwmon0/temp1_crit    # critical threshold
+
+# Fan speed (RPM)
+cat /sys/class/hwmon/hwmon0/fan1_input
+
+# Voltage (millivolts)
+cat /sys/class/hwmon/hwmon0/in0_input
+
+# List all hwmon readings in one shot
+for f in /sys/class/hwmon/hwmon*/name; do
+  echo "=== $(cat "$f") ==="
+  dir=$(dirname "$f")
+  for t in "$dir"/temp*_input; do
+    [ -f "$t" ] && echo "  $(basename "$t"): $(cat "$t")"
+  done
+done
+
+@text
+Sensor configuration lives in /etc/sensors3.conf and /etc/sensors.d/.
+You can set labels, adjust offsets, and define virtual sensors.
+
+@code bash
+# Override labels and compute values in /etc/sensors.d/custom.conf
+# chip "coretemp-isa-0000"
+#   label temp2 "Core 0"
+#   set temp2_max 85
+#   set temp2_crit 95
+
+# Reload configuration
+sudo sensors -s

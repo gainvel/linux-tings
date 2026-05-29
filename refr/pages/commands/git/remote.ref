@@ -1,0 +1,91 @@
+---
+title: Remote
+order: 3
+description: Remote repositories, push, pull, fetch, and upstream tracking
+tags: [git, remote, push, pull, fetch, upstream, origin]
+---
+
+Remotes are named references to external repositories. Origin is the
+conventional name for the primary remote.
+
+@code bash
+# List remotes
+git remote
+git remote -v                    # show URLs
+
+# Add and manage remotes
+git remote add origin git@github.com:user/repo.git
+git remote add upstream https://github.com/original/repo.git
+git remote rename origin old-origin
+git remote remove upstream
+git remote set-url origin git@github.com:user/new-repo.git
+git remote show origin           # detailed remote info
+
+@text
+Fetch downloads objects and refs from remotes without modifying the
+working tree. Pull is fetch + merge (or rebase).
+
+@code bash
+# Fetch
+git fetch                        # fetch from origin
+git fetch --all                  # fetch from all remotes
+git fetch origin main            # fetch specific branch
+git fetch --prune                # remove stale remote-tracking branches
+git fetch --tags                 # fetch all tags
+
+# Pull (fetch + merge)
+git pull
+git pull origin main
+git pull --rebase                # fetch + rebase instead of merge
+git pull --rebase=interactive    # interactive rebase on pull
+
+@text
+Push uploads local commits to a remote. Set up tracking so future
+push/pull commands know the default remote and branch.
+
+@code bash
+# Push
+git push
+git push origin main
+git push origin feature-auth
+git push --all                   # push all branches
+git push --tags                  # push all tags
+
+# Set upstream tracking
+git push -u origin feature-auth  # push and track
+git branch --set-upstream-to=origin/main main
+
+# Check tracking
+git branch -vv                   # show tracking branches
+
+# Force push (use with care)
+git push --force-with-lease      # safer: fails if remote has new commits
+git push --force                 # overwrites remote (dangerous)
+
+# Push a tag
+git tag v1.0
+git push origin v1.0
+git push origin --tags           # push all tags
+
+# Delete remote branch/tag
+git push origin --delete feature-auth
+git push origin --delete v0.9    # delete remote tag
+
+@text
+Common fork workflow: track both origin (your fork) and upstream
+(original repo).
+
+@code bash
+# Set up fork tracking
+git remote add upstream https://github.com/original/repo.git
+git fetch upstream
+
+# Sync fork with upstream
+git checkout main
+git fetch upstream
+git merge upstream/main          # or: git rebase upstream/main
+git push origin main
+
+# Create PR branch from upstream
+git fetch upstream
+git switch -c fix-typo upstream/main

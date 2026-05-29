@@ -1,0 +1,181 @@
+---
+title: Init Scripts
+order: 4
+description: openrc-run, writing init scripts, depend(), start(), stop()
+tags: [openrc, init-scripts, openrc-run, writing-services]
+---
+
+OpenRC init scripts are shell scripts in /etc/init.d/ that use the openrc-run framework to define services.
+
+@text
+Script Structure
+
+@code bash
+# Minimal init script template: /etc/init.d/myservice
+#!/usr/bin/openrc-run
+
+description="My custom service"
+command="/usr/bin/myservice"
+command_args="--daemon --config /etc/myservice.conf"
+command_user="myuser:mygroup"
+pidfile="/run/myservice.pid"
+
+depend() {
+    need net
+    use logger dns
+    after firewall
+}
+
+@text
+Full Script Template
+
+@code bash
+#!/usr/bin/openrc-run
+
+name="myservice"
+description="My custom service daemon"
+
+command="/usr/bin/myservice"
+command_args="--config /etc/myservice/config.toml"
+command_user="myuser:mygroup"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+
+# Directory creation
+directory="/var/lib/myservice"
+required_files="/etc/myservice/config.toml"
+
+# Output redirection
+output_log="/var/log/myservice/output.log"
+error_log="/var/log/myservice/error.log"
+
+depend() {
+    need net localmount
+    use logger dns
+    after firewall
+}
+
+start_pre() {
+    # Run before start — validation, directory creation
+    checkpath --directory --owner myuser:mygroup --mode 0755 /var/lib/myservice
+    checkpath --directory --owner myuser:mygroup --mode 0755 /var/log/myservice
+}
+
+start_post() {
+    # Run after successful start
+    einfo "Service started on port 8080"
+}
+
+stop_pre() {
+    # Run before stop
+    einfo "Shutting down gracefully..."
+}
+
+stop_post() {
+    # Run after stop
+    rm -f /run/myservice.sock
+}
+
+@text
+Dependency Keywords
+
+@code bash
+# depend() function keywords:
+
+# need <service>     — hard dependency, this service MUST be running
+#                      If the dependency fails, this service won't start
+depend() {
+    need net localmount
+}
+
+# use <service>      — soft dependency, start if available
+#                      Won't fail if the dependency isn't available
+depend() {
+    use logger dns
+}
+
+# after <service>    — ordering only, no dependency relationship
+#                      Start this service after the named one
+depend() {
+    after firewall
+}
+
+# before <service>   — ordering only, start before the named service
+depend() {
+    before nginx
+}
+
+# provide <name>     — declare that this script provides a virtual service
+#                      Multiple scripts can provide the same virtual name
+depend() {
+    provide http-server
+}
+
+# keyword <flag>     — special behavior flags
+#   -shutdown        — don't stop on shutdown
+#   -stop            — don't stop ever
+#   -timeout         — don't apply timeout
+depend() {
+    keyword -shutdown
+}
+
+@text
+Helper Functions
+
+@code bash
+# Output functions (for user feedback during start/stop):
+ebegin "Starting myservice"       # Print starting message
+eend $?                            # Print success/fail based on return code
+einfo "Informational message"      # Info (green)
+ewarn "Warning message"            # Warning (yellow)
+eerror "Error message"             # Error (red)
+
+# Path management:
+checkpath --directory --owner user:group --mode 0755 /var/lib/myservice
+checkpath --file --owner user:group --mode 0644 /var/log/myservice.log
+
+# yesno — check boolean config values
+if yesno "${MYSERVICE_VERBOSE}"; then
+    command_args="${command_args} --verbose"
+fi
+
+@text
+Important Variables
+
+@code bash
+# RC_SVCNAME       — name of the current service (matches filename in init.d)
+# command          — path to the daemon binary
+# command_args     — arguments to pass to the command
+# command_user     — run as user:group
+# command_background — run in background (true/false), creates pidfile
+# pidfile          — path to PID file
+# directory        — cd to this directory before starting
+# required_files   — fail if these files don't exist
+# required_dirs    — fail if these directories don't exist
+# start_stop_daemon_args — extra args passed to start-stop-daemon
+# retry            — stop retry schedule (e.g., "TERM/30/KILL/5")
+# output_log       — redirect stdout to this file
+# error_log        — redirect stderr to this file
+
+@text
+Installing and Testing
+
+@code bash
+# Install script
+sudo cp myservice /etc/init.d/myservice
+sudo chmod +x /etc/init.d/myservice
+
+# Test start
+sudo rc-service myservice start
+
+# Check status
+rc-service myservice status
+
+# Check logs on failure
+cat /var/log/myservice/error.log
+
+# Enable at boot
+sudo rc-update add myservice default
+
+# Validate script syntax
+sh -n /etc/init.d/myservice

@@ -1,0 +1,186 @@
+---
+title: Themes & Appearance
+order: 5
+description: Look-and-feel, Kvantum, icon themes, cursor themes, GTK theming
+tags: [themes, kvantum, icons, cursor, gtk, appearance, plasma-style]
+---
+
+Plasma theming covers global themes, Plasma style, colors, icons, cursors, Kvantum, and GTK integration.
+
+@text
+Global Theme (Look and Feel)
+
+A global theme bundles Plasma style, colors, icons, cursors, wallpaper, and splash screen.
+
+@code bash
+# List installed global themes
+ls /usr/share/plasma/look-and-feel/
+ls ~/.local/share/plasma/look-and-feel/
+
+# Apply a global theme
+plasma-apply-lookandfeel -l org.kde.breezedark.desktop
+
+# List available global themes (by package name)
+plasma-apply-lookandfeel --list
+
+# Install a theme from a file
+plasmapkg2 -t lookandfeel -i /path/to/theme.tar.gz
+
+# Plasma 6
+kpackagetool6 -t Plasma/LookAndFeel -i /path/to/theme.tar.gz
+
+@text
+Plasma Style (Desktop Theme)
+
+Controls the appearance of panels, widgets, tooltips, and the system tray.
+
+@code bash
+# List installed Plasma styles
+ls /usr/share/plasma/desktoptheme/
+ls ~/.local/share/plasma/desktoptheme/
+
+# Apply a Plasma style
+plasma-apply-desktoptheme breeze-dark
+
+# Install a Plasma style
+plasmapkg2 -t theme -i /path/to/desktoptheme.tar.gz
+
+@text
+Color Scheme
+
+@code bash
+# List installed color schemes
+ls /usr/share/color-schemes/
+ls ~/.local/share/color-schemes/
+
+# Apply a color scheme
+plasma-apply-colorscheme BreezeDark
+
+# List available color schemes
+plasma-apply-colorscheme --list-schemes
+
+# Install a color scheme (just copy the .colors file)
+cp MyScheme.colors ~/.local/share/color-schemes/
+
+@text
+Icon Theme
+
+@code bash
+# List installed icon themes
+ls /usr/share/icons/
+ls ~/.local/share/icons/
+
+# Set icon theme via config
+kwriteconfig5 --file kdeglobals --group Icons --key Theme "Papirus-Dark"
+
+# Apply and reload (Plasma 5)
+# After changing, reconfigure running apps:
+qdbus org.kde.KWin /KWin reconfigure
+
+# Install icon theme from package
+sudo pacman -S papirus-icon-theme
+
+# Install manually
+tar xf icon-theme.tar.gz -C ~/.local/share/icons/
+gtk-update-icon-cache ~/.local/share/icons/ThemeName/
+
+@text
+Cursor Theme
+
+@code bash
+# List installed cursor themes
+ls /usr/share/icons/*/cursors 2>/dev/null | sed 's|/cursors||;s|.*/||'
+ls ~/.local/share/icons/*/cursors 2>/dev/null | sed 's|/cursors||;s|.*/||'
+
+# Apply a cursor theme
+plasma-apply-cursortheme Breeze_Snow
+
+# List available cursor themes
+plasma-apply-cursortheme --list-themes
+
+# Set cursor size
+kwriteconfig5 --file kcminputrc --group Mouse --key cursorSize 32
+
+# Set cursor theme for X11 fallback (add to ~/.Xresources)
+# Xcursor.theme: Breeze_Snow
+# Xcursor.size: 32
+# Then: xrdb -merge ~/.Xresources
+
+@text
+Kvantum — Qt Theme Engine
+
+Kvantum provides SVG-based Qt theming with blur, transparency, and custom widgets.
+
+@code bash
+# Install Kvantum
+sudo pacman -S kvantum
+
+# Set Qt style to Kvantum
+kwriteconfig5 --file kdeglobals --group KDE --key widgetStyle kvantum
+
+# Open Kvantum Manager GUI
+kvantummanager
+
+# Set a Kvantum theme via CLI config
+# Themes are in /usr/share/Kvantum/ or ~/.config/Kvantum/
+# Active theme set in ~/.config/Kvantum/kvantum.kvconfig:
+# [General]
+# theme=KvArcDark
+
+# Install a Kvantum theme
+mkdir -p ~/.config/Kvantum/
+cp -r /path/to/KvTheme ~/.config/Kvantum/
+
+@text
+GTK Theme Integration
+
+Make GTK apps (Firefox, GIMP, etc.) match the Plasma appearance.
+
+@code bash
+# Install GTK Breeze theme
+sudo pacman -S breeze-gtk
+
+# Set GTK2 theme (~/.gtkrc-2.0)
+# gtk-theme-name="Breeze-Dark"
+# gtk-icon-theme-name="breeze-dark"
+# gtk-cursor-theme-name="Breeze_Snow"
+# gtk-font-name="Noto Sans 10"
+
+# Set GTK3 theme (~/.config/gtk-3.0/settings.ini)
+# [Settings]
+# gtk-theme-name=Breeze-Dark
+# gtk-icon-theme-name=breeze-dark
+# gtk-cursor-theme-name=Breeze_Snow
+# gtk-font-name=Noto Sans 10
+# gtk-application-prefer-dark-theme=true
+
+# Set GTK4 theme
+# Same as GTK3, in ~/.config/gtk-4.0/settings.ini
+
+# Plasma's GTK settings module handles this automatically:
+kcmshell5 kcm_style        # includes GTK tab
+
+# Force GTK theme via environment
+# export GTK_THEME=Breeze-Dark
+
+@text
+Fonts
+
+@code bash
+# Set default fonts via config
+kwriteconfig5 --file kdeglobals --group General --key font "Noto Sans,10,-1,5,50,0,0,0,0,0"
+kwriteconfig5 --file kdeglobals --group General --key fixed "Hack,10,-1,5,50,0,0,0,0,0"
+
+# Set font DPI
+kwriteconfig5 --file kcmfonts --group General --key forceFontDPI 96
+
+# Font anti-aliasing settings
+kwriteconfig5 --file kdeglobals --group General --key XftAntialias true
+kwriteconfig5 --file kdeglobals --group General --key XftHintStyle hintslight
+kwriteconfig5 --file kdeglobals --group General --key XftSubPixel rgb
+
+# Rebuild font cache after installing new fonts
+fc-cache -fv
+
+# List installed fonts matching a pattern
+fc-list | grep -i "hack"

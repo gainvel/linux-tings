@@ -1,0 +1,121 @@
+---
+title: SSH File Transfer
+order: 3
+description: scp, sftp, rsync over SSH
+tags: [scp, sftp, rsync, ssh, transfer, copy]
+---
+
+File transfer methods that use SSH for encryption and authentication.
+rsync is preferred for most tasks; scp is simplest for quick copies;
+sftp provides an interactive FTP-like interface.
+
+@code bash
+# ---- scp: secure copy ----
+
+# local to remote
+scp file.txt user@host:/remote/path/
+scp file.txt user@host:~/                          # home directory
+scp -r /local/dir/ user@host:/remote/path/         # recursive (directory)
+
+# remote to local
+scp user@host:/remote/file.txt /local/path/
+scp -r user@host:/remote/dir/ /local/path/
+
+# remote to remote
+scp user@host1:/path/file.txt user@host2:/path/
+
+# options
+scp -P 2222 file.txt user@host:/path/              # custom port (capital P)
+scp -i ~/.ssh/mykey file.txt user@host:/path/       # specific key
+scp -l 1000 file.txt user@host:/path/              # bandwidth limit (Kbit/s)
+scp -C file.txt user@host:/path/                    # enable compression
+scp -p file.txt user@host:/path/                    # preserve times/modes
+scp -q file.txt user@host:/path/                    # quiet mode
+
+# via jump host
+scp -J jumpuser@bastion file.txt user@internal:/path/
+scp -o ProxyJump=bastion file.txt user@internal:/path/
+
+@text
+scp is deprecated in favor of sftp/rsync for new use. It has known issues
+with filename handling and lacks features like delta transfer. OpenSSH 9.0+
+uses the SFTP protocol internally for scp by default.
+
+@code bash
+# ---- sftp: SSH file transfer protocol ----
+
+# connect
+sftp user@host
+sftp -P 2222 user@host                    # custom port
+sftp -i ~/.ssh/mykey user@host
+
+# interactive commands
+sftp> ls                                  # list remote files
+sftp> lls                                 # list local files
+sftp> cd /remote/path                     # change remote directory
+sftp> lcd /local/path                     # change local directory
+sftp> pwd                                 # remote working directory
+sftp> lpwd                                # local working directory
+
+sftp> get file.txt                        # download file
+sftp> get -r remote_dir/                  # download directory
+sftp> get *.log                           # wildcard download
+
+sftp> put file.txt                        # upload file
+sftp> put -r local_dir/                   # upload directory
+sftp> put *.conf                          # wildcard upload
+
+sftp> mkdir newdir                        # create remote directory
+sftp> rm file.txt                         # delete remote file
+sftp> rmdir emptydir                      # delete remote directory
+sftp> rename old.txt new.txt              # rename remote file
+sftp> chmod 644 file.txt                  # change permissions
+sftp> chown user file.txt                 # change owner
+
+sftp> df -h                               # remote disk usage
+sftp> !command                            # run local shell command
+sftp> bye                                 # disconnect (or quit/exit)
+
+# non-interactive / batch mode
+sftp -b batchfile user@host               # run commands from file
+echo "get /remote/file.txt" | sftp user@host
+
+@code bash
+# ---- rsync over SSH (default transport) ----
+
+# push local to remote
+rsync -avzP /local/path/ user@host:/remote/path/
+
+# pull remote to local
+rsync -avzP user@host:/remote/path/ /local/path/
+
+# custom SSH options
+rsync -avz -e 'ssh -p 2222 -i ~/.ssh/mykey' src/ user@host:/dest/
+
+# via jump host
+rsync -avz -e 'ssh -J jumpuser@bastion' src/ user@host:/dest/
+
+# common patterns
+rsync -avz --delete src/ user@host:/dest/         # mirror (delete extra files)
+rsync -avzn src/ user@host:/dest/                  # dry run first
+rsync -avz --exclude='.git' src/ user@host:/dest/ # exclude patterns
+rsync -avz --partial --append-verify src/ user@host:/dest/   # resume large files
+rsync -avz --bwlimit=5000 src/ user@host:/dest/   # limit to 5000 KB/s
+
+# backup with timestamp
+rsync -avz --backup --suffix=".$(date +%Y%m%d)" src/ user@host:/dest/
+
+# incremental backup with hardlinks
+rsync -avz --delete --link-dest=/backups/previous/ src/ user@host:/backups/current/
+
+@text
+Trailing slash matters with rsync:
+- `rsync src/ dest/` copies contents of src into dest
+- `rsync src dest/` copies the src directory itself into dest (creates dest/src/)
+
+rsync advantages over scp:
+- Delta transfer: only sends differences, much faster for updates
+- Resumable: --partial keeps partial files for resume
+- Exclusions: --exclude for fine-grained control
+- Verification: checksums ensure integrity
+- Bandwidth control: --bwlimit for throttling
