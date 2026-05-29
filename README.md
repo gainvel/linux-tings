@@ -4,7 +4,8 @@ Personal public backup of my custom projects, configs, wallpapers, and anything
 else worth keeping. Partly a safety net in case my things go bye bye, partly to
 share.
 
-Backed up from `~/Repo` on an Artix Linux desktop.
+Backed up from `~/Repo` on my Artix Linux desktop, which incase you didn't know
+does not include SystemD, may be important, probably won't though :)
 
 ## Usage
 
