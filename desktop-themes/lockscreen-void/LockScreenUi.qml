@@ -189,8 +189,8 @@ Item {
             }
 
             onPasswordResult: password => {
-                lockScreenUi.pendingPassword = password
-                authenticator.startAuthenticating()
+                lockScreenUi.pendingPassword = ""
+                authenticator.respond(password)
             }
         }
 

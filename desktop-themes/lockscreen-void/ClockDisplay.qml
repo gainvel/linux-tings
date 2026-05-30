@@ -37,6 +37,7 @@ Item {
             text: Qt.formatTime(new Date(), "HH:mm")
             color: "#ffffff"
             font.family: laroFont.name
+            font.weight: Font.ExtraBold
             font.pixelSize: root.timeSize
             font.letterSpacing: -2.0
             renderType: Text.CurveRendering
@@ -49,6 +50,7 @@ Item {
             color: "#ffffff"
             opacity: 0.7
             font.family: laroFont.name
+            font.weight: Font.ExtraBold
             font.pixelSize: root.dateSize
             font.letterSpacing: 0.5
             renderType: Text.CurveRendering
