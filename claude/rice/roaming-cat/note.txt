@@ -1,0 +1,77 @@
+Roaming Cat — Sprite Creation Reference
+========================================
+
+TOOLS
+-----
+Krita 6.0.1 (installed)
+  - Full animation timeline: Window > Dockers > Animation, Timeline
+  - Onion skinning: toggle in timeline docker, configure frame range
+  - Pixel brush: use "Pixel Art" brush preset (Brush tool > presets)
+  - Canvas: set to exact sprite dimensions (e.g. 24x24) at 100% zoom
+  - Export sprite strip: Render Animation (File > Render Animation)
+    - Choose "Spritesheet" output, "Horizontal Strip" layout
+    - Exports as single PNG row of all frames
+
+LibreSprite (install: yay -S libresprite-git)
+  - Purpose-built for pixel art sprites and animation
+  - New sprite: File > New, set exact pixel dimensions, Indexed Color mode
+  - Animation: each frame is a "cel" in the timeline at bottom
+  - Onion skinning: toggle icon in timeline bar
+  - Add frames: Frame menu > New Frame (or right-click timeline)
+  - Sprite sheet export: File > Export Sprite Sheet
+    - Layout: "Horizontal Strip" (one row)
+    - Output: PNG
+    - Also exports a JSON descriptor if wanted
+  - Palette: built-in palette editor, great for keeping colors consistent
+
+WHAT THE ENGINE EXPECTS
+-----------------------
+Each animation = one horizontal PNG strip.
+File format: (frameWidth * frameCount) x frameHeight
+Example: 8-frame walk at 24x24 = a 192x24 PNG
+
+File names must match manifest.json keys:
+  idle.png, walk-right.png, walk-left.png, turn-r2l.png, turn-l2r.png,
+  sit-down.png, sitting-idle.png, lay-down.png, sleeping.png, wake-up.png,
+  stretch.png, groom.png, alert.png
+
+Default size: 24x24 per frame (configurable — pack any size you want,
+just set width/height in manifest.json).
+
+FRAME TARGETS
+-------------
+  idle          4 frames    subtle breathing or blink
+  walk-right    8 frames    full walk cycle
+  walk-left     8 frames    can mirror walk-right or draw unique
+  turn-r2l      4 frames    facing right -> facing left
+  turn-l2r      4 frames    facing left -> facing right
+  sit-down      4 frames    standing -> sitting transition
+  sitting-idle  4 frames    sitting with tail swish or blink
+  lay-down      4 frames    sitting -> laying transition
+  sleeping      4 frames    slow breathing / zzz
+  wake-up       4 frames    laying -> sitting transition
+  stretch       6 frames    full body stretch
+  groom         6 frames    licking paw / grooming
+  alert         3 frames    ears perk up, head turn
+
+  Total: ~63 frames across 13 strips.
+
+These counts are suggestions, not rules. The engine reads frame count
+from manifest.json, so use whatever feels right per animation.
+
+TIPS
+----
+- Start with walk-right — it's the most visible animation and sets
+  the character's proportions. Build everything else from that base.
+- Use onion skinning (both tools support it) to check frame-to-frame
+  flow before exporting.
+- Stick to a limited palette (4-8 colors). Pixel art reads better with
+  fewer, intentional colors. Your reference cat uses ~4: black, dark
+  gray, medium gray, yellow (eye).
+- Preview animations in-tool at target FPS before exporting. Both Krita
+  and LibreSprite have real-time animation playback.
+- walk-left can be a horizontal mirror of walk-right if the cat is
+  symmetric. If not (e.g. visible eye only on one side), draw it
+  separately.
+- For turn animations: focus on the head/body rotation. 4 frames is
+  enough for a clean read at 8 FPS.

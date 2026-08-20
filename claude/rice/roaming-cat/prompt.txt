@@ -1,0 +1,33 @@
+  Small refresher, this is a taskbar sprite application/engine. The sprite *in this case a cat*
+  will just be sitting there. Sleeping sometimes, roaming others, sitting
+  grooming, any typical cat behavior in pixel animation form. I want to be able to support as many
+  different actions as possible, as many as the 24px x 24px square will let me (or other size).
+
+  1. I need you to plan out a reliable, robust, accurate logic system. By default, I always want
+  the bottom of the pixel art to be touching the top of the taskbar. I don't want sloppy spghetti,
+  I want a customizable framework that allows the user to fine tune anything. If the pixel art
+  should be offset by -1 px, (1px is below the taskbar), the user should be able to do that via a
+  config (maybe jsonc?).
+
+  2. The sprites behavior should also be customizable, everything about the sprite for that matter
+  should be customizable. For now I want to start of reasonable, so lets do some basic animations
+  (limit ourselves to roaming/walking, turning, sitting, and lying-down/sleeping.)
+  (Please also tell me exactly how many different sprites/animations I should make (note.txt,
+  already exists but doesnt allign with animations I want). (Using libresprite for sprites,
+  refrence image for what the cat sprites may look like; /home/void/sprites/Roku-RFace-Static.ase).
+
+  3. The behavior logic should be well thought out. I want these cat sprites to not only look
+  (sorta) like cats, but also act like them. This is a background sprite, just there as eye candy,
+  sitting, sleeping, doing nothing. Behavior should be fairly random/slow paced, but if the user
+  wants they should be able to adjust the behavior.
+
+  Smaller notes
+  - I want this to run fast, not sure if Go/Rust is the right move.
+  - Will have a CLI to go along with it later, add suport with the logic to allow for future flags
+  to changed certain behaviors or aspect of this application.
+
+
+  In summary, I need you to update the plan.md, along with any other changes to this bare directory
+   to get started with the foundation. I also need you to update note.txt for an updated refrence.
+  Use the planmd-auditor skill when your finished on the plan to ensure everything is well written
+  and formatted.
